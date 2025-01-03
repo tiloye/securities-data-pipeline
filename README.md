@@ -13,7 +13,7 @@ There are two folders in the datalake: symbols and price history. The symbols fo
 * DuckDB: for extracting and loading data into an S3 bucket.
 * MinIO: for storing extracted and transformed data in a local S3 bucket.
 * Prefect: for workflow orchestration, monitoring, and scheduling.
-* Docker: for containerzing the project for local and cloud deployment
+* Docker: for containerzing the project for local and cloud deployment.
 
 # Project Structure
 ```
@@ -68,5 +68,5 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
 6. Start a long-running container with the image:
     ```
-    docker run --restart=always --network=host securities-data-pipeline
+    docker run -d --env-file=.env --restart=always --network=host securities-data-pipeline
     ```
