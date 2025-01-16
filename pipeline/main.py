@@ -5,7 +5,7 @@ from prefect import flow, task
 from prefect.artifacts import create_markdown_artifact
 
 import price_history as price_history
-import s3_el
+import utils.s3_el as s3_el
 
 
 @task

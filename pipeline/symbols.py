@@ -1,8 +1,21 @@
 import pandas as pd
-import s3_el
 from prefect import task
 
+import utils.s3_el as s3_el
+
 FX_SYMBOLS = ["EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "JPY=X", "CHF=X", "CAD=X"]
+SP_SYMBOLS_COLUMNS = [
+    "Symbol",
+    "Security",
+    "GICS Sector",
+    "GICS Sub-Industry",
+    "Headquarters Location",
+    "SEC filings",
+    "Date Added",
+    "CIK",
+    "Founded",
+    "Company",
+]
 
 
 @task
@@ -11,12 +24,14 @@ def get_sp_stock_symbols() -> pd.DataFrame:
     sp_stocks = pd.concat(
         [pd.read_html(url.format(index))[0] for index in [400, 500, 600]]
     )
-    return sp_stocks
+    if sp_stocks.columns.isin(SP_SYMBOLS_COLUMNS).all():
+        return sp_stocks
+    return
 
 
 @task
 def transform_stocks_df(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
+    df = df.copy().reset_index(drop=True)
     df.columns = df.columns.str.lower()
     df["name"] = df["security"].combine_first(df["company"])
     df.rename(
@@ -40,6 +55,7 @@ def load_fx_symbols() -> None:
     s3_el.load(fx_symbols_df, "symbols", "fx")
     print(f"Successfully loaded symbols data for {len(fx_symbols_df)} forex pairs.")
 
+
 @task(log_prints=True)
 def load_symbols(asset_category: str) -> None:
     if asset_category == "fx":
@@ -48,6 +64,7 @@ def load_symbols(asset_category: str) -> None:
         load_sp_stock_symbols()
     else:
         raise ValueError(f"Unknown asset category, {asset_category}")
+
 
 if __name__ == "__main__":
     for asset_category in ["fx", "sp_stocks"]:

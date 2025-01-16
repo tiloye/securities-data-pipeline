@@ -5,7 +5,7 @@ import pandas as pd
 import yfinance as yf
 from prefect import flow, task
 
-import s3_el
+import utils.s3_el as s3_el
 
 YF_ERRORS = {"fx": [], "sp_stocks": []}
 
