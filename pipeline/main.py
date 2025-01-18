@@ -16,7 +16,7 @@ def get_symbols(asset_category: str) -> list[str]:
     except duckdb.IOException:
         import symbols
 
-        symbols.load_symbols(asset_category)
+        symbols.etl()
         return s3_el.extract("symbols", asset_category)
 
 

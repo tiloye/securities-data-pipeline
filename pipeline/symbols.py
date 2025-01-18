@@ -1,5 +1,5 @@
 import pandas as pd
-from prefect import task
+from prefect import task, flow
 
 import utils.s3_el as s3_el
 
@@ -49,23 +49,23 @@ def load_sp_stock_symbols() -> None:
     print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
 
-@task(log_prints=True)
-def load_fx_symbols() -> None:
+@flow(log_prints=True)
+def etl_fx_symbols() -> None:
     fx_symbols_df = pd.DataFrame(FX_SYMBOLS, columns=["symbol"])
     s3_el.load(fx_symbols_df, "symbols", "fx")
     print(f"Successfully loaded symbols data for {len(fx_symbols_df)} forex pairs.")
 
+@flow
+def etl_sp_stocks_symbols():
+    stock_symbols_df = get_sp_stock_symbols()
+    stock_symbols_df = transform_stocks_df(stock_symbols_df)
+    s3_el.load(stock_symbols_df, "symbols", "sp_stocks")
+    print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
-@task(log_prints=True)
-def load_symbols(asset_category: str) -> None:
-    if asset_category == "fx":
-        load_fx_symbols()
-    elif asset_category == "sp_stocks":
-        load_sp_stock_symbols()
-    else:
-        raise ValueError(f"Unknown asset category, {asset_category}")
-
+@flow
+def etl_symbols():
+    etl_fx_symbols()
+    etl_sp_stocks_symbols()
 
 if __name__ == "__main__":
-    for asset_category in ["fx", "sp_stocks"]:
-        load_symbols(asset_category)
+    etl_symbols()
