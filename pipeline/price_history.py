@@ -30,16 +30,16 @@ def check_errors(asset_category: str) -> None:
 
 
 @task
-def transform(df: pd.DataFrame, asset_category: str) -> pd.DataFrame:
+def transform(df: pd.DataFrame, asset_category: str) -> pd.DataFrame | None:
     if df.empty:
-        raise ValueError("Dataframe is empty.")
+        return
     
     failed_symbols = df.columns.get_level_values(0)[
         df.columns.get_level_values(0).isin(YF_ERRORS[asset_category])
     ]
     df = df.drop(failed_symbols, axis=1, level=0)
     df = df.stack("Ticker", future_stack=True).reset_index()
-    df.columns = df.columns.str.lower()
+    df.columns = df.columns.str.lower().rename(None)
     df["date"] = df["date"].dt.date
     df.rename(columns={"ticker": "symbol"}, inplace=True)
     if asset_category == "fx":
