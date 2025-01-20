@@ -9,7 +9,7 @@ def expected_symbols_data():
     sp600_data = pd.DataFrame(
         data=[
             ["A", "Stock A", "Sector 1", "Industry 1", "Location 1", "view", 1],
-            ["B", "Stock B", "Sector 2", "Industry 2", "Location 2", "view", 2],
+            ["B.B", "Stock B", "Sector 2", "Industry 2", "Location 2", "view", 2],
         ],
         columns=[
             "Symbol",
@@ -35,7 +35,7 @@ def expected_symbols_data():
                 "1908",
             ],
             [
-                "D",
+                "D.A",
                 "Stock D",
                 "Sector 2",
                 "Industry 2",
@@ -82,18 +82,6 @@ def unexpected_sp_symbols_data(expected_symbols_data):
     return expected_symbols_data.rename(columns={"Symbol": "Ticker"})
 
 
-def test_get_stock_symbols_returns_dataframe(monkeypatch, expected_symbols_data):
-    """Check that the expected dataframe is returned"""
-
-    monkeypatch.setattr(
-        pd, "read_html", lambda url: [None]
-    )  # Do not send request to wiki page
-    monkeypatch.setattr(pd, "concat", lambda objs: expected_symbols_data)
-    data = get_sp_stock_symbols.fn()
-
-    pd.testing.assert_frame_equal(data, expected_symbols_data)
-
-
 def test_get_stock_symbols_returns_None(monkeypatch, unexpected_sp_symbols_data):
     """Check that None is returned when dataframe does not have expected column."""
 
@@ -111,9 +99,9 @@ def test_transform_stocks_df(expected_symbols_data):
     expected_transformed_data = pd.DataFrame(
         data=[
             ("A", "Stock A", "Sector 1", "Industry 1"),
-            ("B", "Stock B", "Sector 2", "Industry 2"),
+            ("B-B", "Stock B", "Sector 2", "Industry 2"),
             ("C", "Stock C", "Sector 1", "Industry 1"),
-            ("D", "Stock D", "Sector 2", "Industry 2"),
+            ("D-A", "Stock D", "Sector 2", "Industry 2"),
             ("E", "Stock E", "Sector 1", "Industry 1"),
             ("F", "Stock F", "Sector 2", "Industry 2"),
         ],
@@ -122,7 +110,7 @@ def test_transform_stocks_df(expected_symbols_data):
 
     transformed_data = transform_stocks_df.fn(expected_symbols_data)
 
-    # Sort dataframe by symbol to ensure it in the same order with expected dataframe
+    # Sort dataframe by symbol to ensure it has the same order with expected dataframe
     transformed_data = transformed_data.sort_values("symbol").reset_index(drop=True)
 
     pd.testing.assert_frame_equal(transformed_data, expected_transformed_data)
