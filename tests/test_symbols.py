@@ -1,85 +1,23 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
 from pipeline.symbols import get_sp_stock_symbols, transform_stocks_df
 
 
+TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
+
+
 @pytest.fixture
-def expected_symbols_data():
-    sp600_data = pd.DataFrame(
-        data=[
-            ["A", "Stock A", "Sector 1", "Industry 1", "Location 1", "view", 1],
-            ["B.B", "Stock B", "Sector 2", "Industry 2", "Location 2", "view", 2],
-        ],
-        columns=[
-            "Symbol",
-            "Company",
-            "GICS Sector",
-            "GICS Sub-Industry",
-            "Headquarters Location",
-            "SEC filings",
-            "CIK",
-        ],
-    )
-
-    sp500_data = pd.DataFrame(
-        data=[
-            [
-                "C",
-                "Stock C",
-                "Sector 1",
-                "Industry 1",
-                "Location 1",
-                "1990-01-01",
-                3,
-                "1908",
-            ],
-            [
-                "D.A",
-                "Stock D",
-                "Sector 2",
-                "Industry 2",
-                "Location 2",
-                "1991-01-01",
-                4,
-                "1904",
-            ],
-        ],
-        columns=[
-            "Symbol",
-            "Security",
-            "GICS Sector",
-            "GICS Sub-Industry",
-            "Headquarters Location",
-            "Date Added",
-            "CIK",
-            "Founded",
-        ],
-    )
-
-    sp400_data = pd.DataFrame(
-        data=[
-            ["E", "Stock E", "Sector 1", "Industry 1", "Location 1", "reports"],
-            ["F", "Stock F", "Sector 2", "Industry 2", "Location 2", "reports"],
-        ],
-        columns=[
-            "Symbol",
-            "Security",
-            "GICS Sector",
-            "GICS Sub-Industry",
-            "Headquarters Location",
-            "SEC filings",
-        ],
-    )
-
-    symbols_df = pd.concat([sp400_data, sp500_data, sp600_data])
-
+def expected_sp_symbols_data():
+    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
     return symbols_df
 
 
 @pytest.fixture
-def unexpected_sp_symbols_data(expected_symbols_data):
-    return expected_symbols_data.rename(columns={"Symbol": "Ticker"})
+def unexpected_sp_symbols_data(expected_sp_symbols_data):
+    return expected_sp_symbols_data.rename(columns={"Symbol": "Ticker"})
 
 
 def test_get_stock_symbols_returns_None(monkeypatch, unexpected_sp_symbols_data):
@@ -95,20 +33,12 @@ def test_get_stock_symbols_returns_None(monkeypatch, unexpected_sp_symbols_data)
     assert data is None
 
 
-def test_transform_stocks_df(expected_symbols_data):
-    expected_transformed_data = pd.DataFrame(
-        data=[
-            ("A", "Stock A", "Sector 1", "Industry 1"),
-            ("B-B", "Stock B", "Sector 2", "Industry 2"),
-            ("C", "Stock C", "Sector 1", "Industry 1"),
-            ("D-A", "Stock D", "Sector 2", "Industry 2"),
-            ("E", "Stock E", "Sector 1", "Industry 1"),
-            ("F", "Stock F", "Sector 2", "Industry 2"),
-        ],
-        columns=["symbol", "name", "sector", "industry"],
+def test_transform_stocks_df(expected_sp_symbols_data):
+    expected_transformed_data = pd.read_csv(
+        TEST_DATA_DIR.joinpath("processed_sp_symbols.csv")
     )
 
-    transformed_data = transform_stocks_df.fn(expected_symbols_data)
+    transformed_data = transform_stocks_df.fn(expected_sp_symbols_data)
 
     # Sort dataframe by symbol to ensure it has the same order with expected dataframe
     transformed_data = transformed_data.sort_values("symbol").reset_index(drop=True)
