@@ -35,7 +35,7 @@ def test_get_stock_symbols_returns_None(monkeypatch, unexpected_sp_symbols_data)
 
 def test_transform_stocks_df(expected_sp_symbols_data):
     expected_transformed_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath("processed_sp_symbols.csv")
+        TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
     )
 
     transformed_data = transform_stocks_df.fn(expected_sp_symbols_data)

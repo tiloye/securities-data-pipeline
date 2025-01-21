@@ -39,7 +39,7 @@ def extract(dataset: str, asset_category: str) -> list[str] | duckdb.DuckDBPyRel
 
 @task
 def load(df: DataFrame, dataset: str, asset_category: str) -> None:
-    """Loads price data into an S3 bucket."""
+    """Load price or symbols data into an S3 bucket."""
 
     path = f"{DATA_PATH}/{dataset}/{asset_category}"
     if dataset == "symbols":
