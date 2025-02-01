@@ -4,29 +4,17 @@ from prefect import task, flow
 import utils.s3_el as s3_el
 
 FX_SYMBOLS = ["EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "JPY=X", "CHF=X", "CAD=X"]
-SP_SYMBOLS_COLUMNS = [
-    "Symbol",
-    "Security",
-    "GICS Sector",
-    "GICS Sub-Industry",
-    "Headquarters Location",
-    "SEC filings",
-    "Date Added",
-    "CIK",
-    "Founded",
-    "Company",
-]
 
 
 @task
 def get_sp_stock_symbols() -> pd.DataFrame:
+    cols = ["Symbol", "Security", "Company", "GICS Sector", "GICS Sub-Industry"]
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_{}_companies"
     sp_stocks = pd.concat(
         [pd.read_html(url.format(index))[0] for index in [400, 500, 600]]
     )
-    if sp_stocks.columns.isin(SP_SYMBOLS_COLUMNS).all():
-        return sp_stocks
-    return
+
+    return sp_stocks[cols]
 
 
 @task
