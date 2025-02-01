@@ -8,6 +8,8 @@ from utils import s3_el
 
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
+s3_el.BUCKET_NAME = "test-" + s3_el.BUCKET_NAME
+s3_el.DATA_PATH = f"s3://{s3_el.BUCKET_NAME}"
 
 client = Minio(
     s3_el.S3_ENDPOINT.replace("http://", ""),
@@ -19,15 +21,15 @@ client = Minio(
 
 @pytest.fixture(autouse=True, scope="module")
 def s3_bucket():
-    client.make_bucket("securities-datalake")
+    client.make_bucket(s3_el.BUCKET_NAME)
     yield
     objs = [
         obj.object_name
-        for obj in client.list_objects("securities-datalake", recursive=True)
+        for obj in client.list_objects(s3_el.BUCKET_NAME, recursive=True)
     ]
     for obj in objs:
-        client.remove_object("securities-datalake", obj)
-    client.remove_bucket("securities-datalake")
+        client.remove_object(s3_el.BUCKET_NAME, obj)
+    client.remove_bucket(s3_el.BUCKET_NAME)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
@@ -38,7 +40,7 @@ def test_load_symbols_data(asset_category):
 
     s3_el.load.fn(symbols, "symbols", asset_category)
 
-    s3_objects = client.list_objects("securities-datalake", recursive=True)
+    s3_objects = client.list_objects(s3_el.BUCKET_NAME, recursive=True)
     s3_objects = [obj.object_name for obj in s3_objects]
     assert f"symbols/{asset_category}.csv" in s3_objects
 
@@ -62,7 +64,7 @@ def test_load_price_data(asset_category):
 
     s3_el.load.fn(price_df, "price_history", asset_category)
 
-    s3_objects = client.list_objects("securities-datalake", recursive=True)
+    s3_objects = client.list_objects(s3_el.BUCKET_NAME, recursive=True)
     s3_objects = [obj.object_name for obj in s3_objects]
     assert f"price_history/{asset_category}.parquet" in s3_objects
 
