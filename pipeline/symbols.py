@@ -41,19 +41,12 @@ def transform_stocks_df(df: pd.DataFrame) -> pd.DataFrame:
     return df[["symbol", "name", "sector", "industry"]]
 
 
-@task
-def load_sp_stock_symbols() -> None:
-    stock_symbols_df = get_sp_stock_symbols()
-    stock_symbols_df = transform_stocks_df(stock_symbols_df)
-    s3_el.load(stock_symbols_df, "symbols", "sp_stocks")
-    print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
-
-
 @flow(log_prints=True)
 def etl_fx_symbols() -> None:
     fx_symbols_df = pd.DataFrame(FX_SYMBOLS, columns=["symbol"])
     s3_el.load(fx_symbols_df, "symbols", "fx")
     print(f"Successfully loaded symbols data for {len(fx_symbols_df)} forex pairs.")
+
 
 @flow
 def etl_sp_stocks_symbols():
@@ -62,10 +55,15 @@ def etl_sp_stocks_symbols():
     s3_el.load(stock_symbols_df, "symbols", "sp_stocks")
     print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
+
 @flow
-def etl_symbols():
-    etl_fx_symbols()
-    etl_sp_stocks_symbols()
+def etl(asset_category: str) -> None:
+    if asset_category == "fx":
+        etl_fx_symbols()
+    else:
+        etl_sp_stocks_symbols()
+
 
 if __name__ == "__main__":
-    etl_symbols()
+    for asset_category in ["fx", "sp_stocks"]:
+        etl(asset_category)
