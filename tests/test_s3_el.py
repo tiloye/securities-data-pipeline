@@ -35,7 +35,9 @@ def s3_bucket():
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_symbols_data(asset_category):
     symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+        TEST_DATA_DIR.joinpath(
+            f"{"raw" if asset_category == "fx" else "processed"}_{asset_category}_symbols.csv"
+        )
     )
 
     s3_el.load.fn(symbols, "symbols", asset_category)
@@ -48,7 +50,9 @@ def test_load_symbols_data(asset_category):
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_extract_symbols(asset_category):
     expected_symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+        TEST_DATA_DIR.joinpath(
+            f"{"raw" if asset_category == "fx" else "processed"}_{asset_category}_symbols.csv"
+        )
     )["symbol"].to_list()
 
     symbols = s3_el.extract.fn("symbols", asset_category)
