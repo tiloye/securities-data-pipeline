@@ -49,7 +49,7 @@ def sp_symbols():
 
 def test_etl_fx_symbols():
     expected_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_symbols.csv"))
+        pd.read_csv(TEST_DATA_DIR.joinpath("raw_fx_symbols.csv"))
         .sort_values("symbol")
         .reset_index(drop=True)
     )
