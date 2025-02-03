@@ -33,7 +33,7 @@ def check_errors(asset_category: str) -> None:
 def transform(df: pd.DataFrame, asset_category: str) -> pd.DataFrame | None:
     if df.empty:
         return
-    
+
     failed_symbols = df.columns.get_level_values(0)[
         df.columns.get_level_values(0).isin(YF_ERRORS[asset_category])
     ]
@@ -77,8 +77,11 @@ def etl_bars_in_chunk(
         price_history = et_price_history_from_source(
             asset_category, symbols_subset, start_date, end_date
         )
+        if price_history is None:
+            continue
         s3_el.load(price_history, "price_history", asset_category)
-        time.sleep(5)
+    if len(symbols) == len(YF_ERRORS[asset_category]):
+        raise ValueError("Could not transform empty dataframes")
 
 
 @flow(log_prints=True)
@@ -92,13 +95,13 @@ def etl_bars(
     print(f"Requesting {asset_category} price from {start_date} to {end_date}")
 
     if len(symbols) > chunk_size:
-        etl_bars_in_chunk(
-            asset_category, symbols, start_date, end_date, chunk_size
-        )
+        etl_bars_in_chunk(asset_category, symbols, start_date, end_date, chunk_size)
     else:
         price_history = et_price_history_from_source(
             asset_category, symbols, start_date, end_date
         )
+        if price_history is None:
+            raise ValueError("Tranformed dataframe is empty")
         s3_el.load(price_history, "price_history", asset_category)
 
     print(
