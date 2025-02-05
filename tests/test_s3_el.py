@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from duckdb import DuckDBPyRelation
 from minio import Minio
-from utils import s3_el
+from pipeline import s3_el
 
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")

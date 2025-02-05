@@ -5,8 +5,7 @@ import pytest
 from minio import Minio
 from prefect.testing.utilities import prefect_test_harness
 
-from pipeline import symbols
-from utils import s3_el
+from pipeline import symbols, s3_el
 
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")

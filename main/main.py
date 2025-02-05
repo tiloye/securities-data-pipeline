@@ -4,8 +4,7 @@ import duckdb
 from prefect import flow, task
 from prefect.artifacts import create_markdown_artifact
 
-import price_history as price_history
-import utils.s3_el as s3_el
+from pipeline import price_history, s3_el
 
 
 @task
@@ -14,18 +13,18 @@ def get_symbols(asset_category: str) -> list[str]:
         symbols = s3_el.extract("symbols", asset_category)
         return symbols
     except duckdb.IOException:
-        import symbols
+        from pipeline import symbols
 
-        symbols.etl()
+        symbols.etl(asset_category)
         return s3_el.extract("symbols", asset_category)
 
 
 @task
 def get_hist_start_end_dates(asset_category: str) -> str | dt.date:
     try:
-        price_history = s3_el.extract("price_history", asset_category)
+        prices = s3_el.extract("price_history", asset_category)
         dates = (
-            duckdb.sql("SELECT date FROM price_history ORDER BY date").df().squeeze()
+            duckdb.sql("SELECT date FROM prices ORDER BY date").df().squeeze()
         )
         start_date = dates.iloc[-1] + dt.timedelta(days=1)
         end_date = dt.datetime.now().date()
@@ -57,9 +56,7 @@ def etl(
                 if not (start_date and end_date)
                 else (start_date, end_date)
             )
-            price_history.etl_bars(
-                category, symbols, start_date, end_date, chunk_size
-            )
+            price_history.etl_bars(category, symbols, start_date, end_date, chunk_size)
             symbols = None
     else:
         symbols = get_symbols(asset_category) if not symbols else symbols
@@ -82,4 +79,4 @@ def etl(
 
 
 if __name__ == "__main__":
-    etl.serve(name="securities-data-pipeline", cron="0 0 * * 1-5")
+   etl()

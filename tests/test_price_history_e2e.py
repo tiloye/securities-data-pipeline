@@ -5,8 +5,7 @@ import pytest
 from minio import Minio
 from prefect.testing.utilities import prefect_test_harness
 
-from pipeline import price_history as ph
-from utils import s3_el
+from pipeline import s3_el, price_history as ph
 
 
 FX_SYMBOLS = ["EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "JPY=X", "CHF=X", "CAD=X"]

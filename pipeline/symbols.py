@@ -1,7 +1,7 @@
 import pandas as pd
 from prefect import task, flow
 
-import utils.s3_el as s3_el
+from . import s3_el
 
 FX_SYMBOLS = ["EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "JPY=X", "CHF=X", "CAD=X"]
 
