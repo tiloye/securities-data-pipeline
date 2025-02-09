@@ -15,42 +15,34 @@ There are two folders in the datalake: symbols and price history. The symbols fo
 * Prefect: for workflow orchestration, monitoring, and scheduling.
 * Docker: for containerzing the project for local and cloud deployment.
 
-# Project Structure
-```
-└── securities-data-pipeline
-    └── pipeline
-        └── main.py            # Main module for interacting with the pipeline
-        └── price_history.py   # Contains code for extracting, tranforming, and loading price data
-        └── s3_el.py           # Contains code for interacting with AWS/MinIO S3 bucket
-        └── symbols.py         # Contains code for extracting, tranforming, loading symbols data
-    └── .dockerignore
-    └── .env
-    └── .gitignore
-    └── .python-version
-    └── Dockerfile
-    └── pyproject.toml
-    └── README.md
-    └── uv.lock
-```
-
 # Setting up and running the pipeline locally 
 Ensure you have Docker installed on your system. The following steps were tested on Ubuntu 22.04.
 
 1. [Install](https://min.io/docs/minio/container/index.html) MinIO via Docker or directly, depending on your operating system.
-2. Run Prefect server in a Docker container:
+2. Start Prefect server in a Docker container:
     ```
     docker run \
+     -v /var/run/docker.sock:/var/run/docker.sock \
      -v YOUR_VOLUME_DIR:root/.prefect \
      -e PREFECT_SERVER_API_HOST=0.0.0.0 \
      -e PREFECT_UI_URL=http://localhost:4200/api \
      -e PREFECT_API_URL=http://localhost:4200/api \
      -p 4200:4200 \
+     --name=prefect_server \
      --restart=always \
      prefecthq/prefect:3.1.7-python3.12 \
      prefect server start
     ```
+3. Create a Docker type work pool in Prefect UI or run:
+    ```
+    docker exec prefect_server prefect work-pool create --type docker docker-pool
+    ```
+4. Start a Prefect worker in a new terminal:
+    ```
+    docker exec --it prefect_server prefect worker start --pool docker-pool
+    ```
 
-3. Clone the repository:
+5. Clone the repository:
     ```
     git clone https://github.com/tiloye/securities-data-pipeline.git
     ```
@@ -59,14 +51,13 @@ Ensure you have Docker installed on your system. The following steps were tested
     AWS_ACCESS_KEY=your_aws/minio_access_key
     AWS_SECRET_KEY=your_aws/minio_secret_key
     S3_ENDPOINT=your_aws/minio_s3_endpoint_url
+    BUCKET_NAME=your-bucket-name
     
     PREFECT_API_URL=your_prefect_api_url
     ```
 5. Create docker image for the pipeline:
     ```
-    docker build -t securities-data-pipeline .
+    docker build -t securities-data-pipeline:latest .
     ```
-6. Start a long-running container with the image:
-    ```
-    docker run -d --env-file=.env --restart=always --network=host securities-data-pipeline
-    ```
+
+Your prefect UI should now have two new deployments for forex (fx-data-pipeline) and SP500 stocks (sp-stocks-data-pipeline) data respectively.
