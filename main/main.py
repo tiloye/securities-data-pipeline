@@ -2,9 +2,8 @@ import datetime as dt
 
 import duckdb
 from prefect import flow, task
-from prefect.artifacts import create_markdown_artifact
 
-from pipeline import price_history, s3_el
+from pipeline import price_history as ph, s3_el
 
 
 @task
@@ -33,7 +32,7 @@ def get_hist_start_end_dates(asset_category: str) -> dt.date:
         return start_date, end_date
 
 
-@flow
+@flow(log_prints=True)
 def etl(
     asset_category: str,
     symbols: list[str] | None = None,
@@ -52,17 +51,18 @@ def etl(
         if not (start_date and end_date)
         else (start_date, end_date)
     )
-    price_history.etl_bars(
-        asset_category, symbols, start_date, end_date, chunk_size
-    )
+    ph.etl_bars(asset_category, symbols, start_date, end_date, chunk_size)
 
-    create_markdown_artifact(
-        f"""
-        Downloaded {asset_category if isinstance(asset_category, str) else ", ".join(asset_category)} price history from {start_date} to {end_date}.
-        Failed downloads: {price_history.YF_ERRORS}
-        """,
-        description="YF Result",
-    )
+    if ph.YF_ERRORS[asset_category]:
+        raise RuntimeError(
+            f"""
+            Failed to get data for some symbols
+            Asset category: {asset_category}
+            Symbols: {ph.YF_ERRORS[asset_category]}
+            Start date: {start_date}
+            End date: {end_date}
+            """
+        )
 
 
 if __name__ == "__main__":
