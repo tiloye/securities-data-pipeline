@@ -57,7 +57,7 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
 5. Create docker image for the pipeline:
     ```
-    docker build -t securities-data-pipeline:latest .
+    docker compose build
     ```
 
 Your prefect UI should now have two new deployments for forex (fx-data-pipeline) and SP500 stocks (sp-stocks-data-pipeline) data respectively.
