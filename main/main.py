@@ -58,7 +58,7 @@ def etl(
             f"""
             Failed to get data for some symbols
             Asset category: {asset_category}
-            Symbols: {ph.YF_ERRORS[asset_category]}
+            Symbols: {str(ph.YF_ERRORS[asset_category]).replace("'", "\"")}
             Start date: {start_date}
             End date: {end_date}
             """
