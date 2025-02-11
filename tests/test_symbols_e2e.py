@@ -3,7 +3,6 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from minio import Minio
-from prefect.testing.utilities import prefect_test_harness
 
 from pipeline import symbols, s3_el
 
@@ -19,12 +18,6 @@ client = Minio(
     secret_key=s3_el.AWS_SECRET_KEY,
     secure=False,
 )
-
-
-@pytest.fixture(autouse=True, scope="session")
-def prefect_test_fixture():
-    with prefect_test_harness():
-        yield
 
 
 @pytest.fixture(autouse=True, scope="module")

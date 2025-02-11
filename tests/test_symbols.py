@@ -20,7 +20,7 @@ def test_transform_stocks_df(expected_sp_symbols_data):
         TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
     )
 
-    transformed_data = transform_stocks_df.fn(expected_sp_symbols_data)
+    transformed_data = transform_stocks_df(expected_sp_symbols_data)
 
     # Sort dataframe by symbol to ensure it has the same order with expected dataframe
     transformed_data = transformed_data.sort_values("symbol").reset_index(drop=True)

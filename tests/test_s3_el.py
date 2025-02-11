@@ -40,7 +40,7 @@ def test_load_symbols_data(asset_category):
         )
     )
 
-    s3_el.load.fn(symbols, "symbols", asset_category)
+    s3_el.load(symbols, "symbols", asset_category)
 
     s3_objects = client.list_objects(s3_el.BUCKET_NAME, recursive=True)
     s3_objects = [obj.object_name for obj in s3_objects]
@@ -55,7 +55,7 @@ def test_extract_symbols(asset_category):
         )
     )["symbol"].to_list()
 
-    symbols = s3_el.extract.fn("symbols", asset_category)
+    symbols = s3_el.extract("symbols", asset_category)
 
     assert symbols == expected_symbols
 
@@ -66,7 +66,7 @@ def test_load_price_data(asset_category):
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
 
-    s3_el.load.fn(price_df, "price_history", asset_category)
+    s3_el.load(price_df, "price_history", asset_category)
 
     s3_objects = client.list_objects(s3_el.BUCKET_NAME, recursive=True)
     s3_objects = [obj.object_name for obj in s3_objects]
@@ -75,7 +75,7 @@ def test_load_price_data(asset_category):
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_extract_price_data_returns_duckdb_relation(asset_category):
-    price_history = s3_el.extract.fn("price_history", asset_category)
+    price_history = s3_el.extract("price_history", asset_category)
 
     assert isinstance(price_history, DuckDBPyRelation)
 
@@ -86,7 +86,7 @@ def test_extract_price_data_returns_expected_price_df(asset_category):
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
 
-    price_df = s3_el.extract.fn("price_history", asset_category).df()
+    price_df = s3_el.extract("price_history", asset_category).df()
 
     pd.testing.assert_frame_equal(price_df, expected_price_df)
 
@@ -105,9 +105,9 @@ def test_update_price_data(asset_category):
         .reset_index(drop=True)
     )
 
-    s3_el.load.fn(price_update, "price_history", asset_category)
+    s3_el.load(price_update, "price_history", asset_category)
     price_df = (
-        s3_el.extract.fn("price_history", asset_category)
+        s3_el.extract("price_history", asset_category)
         .df()
         .sort_values(["date", "symbol"])
         .reset_index(drop=True)

@@ -25,8 +25,8 @@ def test_check_error_tracks_failed_downloads(monkeypatch, asset_category, symbol
     monkeypatch.setitem(ph.yf.shared._ERRORS, symbols[0], "Error message")
     monkeypatch.setitem(ph.yf.shared._ERRORS, symbols[1], "Error message")
 
-    data = ph.get_daily_prices.fn(symbols)
-    ph.check_errors.fn(asset_category)
+    data = ph.get_daily_prices(symbols)
+    ph.check_errors(asset_category)
 
     assert ph.YF_ERRORS[asset_category] == list(ph.yf.shared._ERRORS.keys())
 
@@ -35,7 +35,7 @@ def test_check_error_tracks_failed_downloads(monkeypatch, asset_category, symbol
 def test_transform_returns_None_if_df_is_empty(asset_category):
     df = pd.DataFrame(columns=["Ticker", "Open", "High", "Low", "Close"])
 
-    transformed_df = ph.transform.fn(df, asset_category)
+    transformed_df = ph.transform(df, asset_category)
 
     assert transformed_df is None
 
@@ -55,6 +55,6 @@ def test_transform_returns_expected_df(asset_category):
     )
     expected_df["date"] = expected_df["date"].dt.date
 
-    transformed_price_data = ph.transform.fn(price_data, asset_category)
+    transformed_price_data = ph.transform(price_data, asset_category)
 
     pd.testing.assert_frame_equal(transformed_price_data, expected_df)
