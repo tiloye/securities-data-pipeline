@@ -23,23 +23,21 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
     docker run \
      -v /var/run/docker.sock:/var/run/docker.sock \
-     -v YOUR_VOLUME_DIR:root/.prefect \
-     -e PREFECT_SERVER_API_HOST=0.0.0.0 \
-     -e PREFECT_UI_URL=http://localhost:4200/api \
-     -e PREFECT_API_URL=http://localhost:4200/api \
-     -p 4200:4200 \
+     -v /path/to/prefect_data:root/.prefect \
+     -e PREFECT_API_URL=http://127.0.0.1:4200/api \
+     --network=host
      --name=prefect_server \
      --restart=always \
      prefecthq/prefect:3.1.7-python3.12 \
      prefect server start
     ```
-3. Create a Docker type work pool in Prefect UI or run:
+3. Create a Docker work pool in Prefect UI or run:
     ```
     docker exec prefect_server prefect work-pool create --type docker docker-pool
     ```
-4. Start a Prefect worker in a new terminal:
+4. Start a worker for the docker pool in a new terminal:
     ```
-    docker exec --it prefect_server prefect worker start --pool docker-pool
+    docker exec prefect_server prefect worker start --name default-worker --pool docker-pool
     ```
 
 5. Clone the repository:
