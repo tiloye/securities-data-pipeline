@@ -19,7 +19,7 @@ if __name__ == "__main__":
     deploy(
         fx_flow_deployment,
         sp_stocks_flow_deployment,
-        work_pool_name="my-docker-pool",
+        work_pool_name="docker-pool",
         image="securities-data-pipeline:latest",
         build=False,
         push=False,
