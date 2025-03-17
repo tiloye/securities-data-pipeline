@@ -22,5 +22,7 @@ dev-dependencies = [
     "minio>=7.2.15",
     "pytest>=8.3.4",
 ]
+package = true
 
-[tool.uv.sources]
+[tool.setuptools]
+packages = ["pipeline"]
