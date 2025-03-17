@@ -29,14 +29,14 @@ def transform_stocks_df(df: pd.DataFrame) -> pd.DataFrame:
     return df[["symbol", "name", "sector", "industry"]]
 
 
-@flow(log_prints=True)
+@task
 def etl_fx_symbols() -> None:
     fx_symbols_df = pd.DataFrame(FX_SYMBOLS, columns=["symbol"])
     s3_el.load(fx_symbols_df, "symbols", "fx")
     print(f"Successfully loaded symbols data for {len(fx_symbols_df)} forex pairs.")
 
 
-@flow
+@task
 def etl_sp_stocks_symbols():
     stock_symbols_df = get_sp_stock_symbols()
     stock_symbols_df = transform_stocks_df(stock_symbols_df)
@@ -44,7 +44,7 @@ def etl_sp_stocks_symbols():
     print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
 
-@flow
+@flow(name="Symbols ETL")
 def etl(asset_category: str) -> None:
     if asset_category == "fx":
         etl_fx_symbols()

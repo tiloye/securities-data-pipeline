@@ -32,7 +32,7 @@ def get_hist_start_end_dates(asset_category: str) -> dt.date:
         return start_date, end_date
 
 
-@flow(log_prints=True)
+@flow(name="Securities Data ETL", log_prints=True)
 def etl(
     asset_category: str,
     symbols: list[str] | None = None,

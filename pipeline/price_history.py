@@ -21,7 +21,7 @@ def get_daily_prices(
     return bars
 
 
-@task(log_prints=True)
+@task
 def check_errors(asset_category: str) -> None:
     symbols_with_errors = yf.shared._ERRORS
     if symbols_with_errors:
@@ -50,7 +50,7 @@ def transform(df: pd.DataFrame, asset_category: str) -> pd.DataFrame | None:
     return df
 
 
-@flow
+@task
 def et_price_history_from_source(
     asset_category: str,
     symbols: list[str],
@@ -63,7 +63,7 @@ def et_price_history_from_source(
     return price_history
 
 
-@flow
+@task
 def etl_bars_in_chunk(
     asset_category: str,
     symbols: list[str],
@@ -83,7 +83,7 @@ def etl_bars_in_chunk(
         raise ValueError("Could not transform empty dataframes")
 
 
-@flow(log_prints=True)
+@flow(name="Price Bars ETL")
 def etl_bars(
     asset_category: str,
     symbols: list[str],
