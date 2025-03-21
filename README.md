@@ -21,15 +21,15 @@ Ensure you have Docker installed on your system. The following steps were tested
 1. [Install](https://min.io/docs/minio/container/index.html) MinIO via Docker or directly, depending on your operating system.
 2. Start Prefect server in a Docker container:
     ```
-    docker run \
-     -v /var/run/docker.sock:/var/run/docker.sock \
-     -v /path/to/prefect_data:root/.prefect \
-     -e PREFECT_API_URL=http://127.0.0.1:4200/api \
-     --network=host
-     --name=prefect_server \
-     --restart=always \
-     prefecthq/prefect:3.1.7-python3.12 \
-     prefect server start
+    docker run -d \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v ./data:/root/.prefect \
+      -e PREFECT_API_URL=http://localhost:4200/api \
+      --network=host \
+      --restart=always \
+      --name=prefect_server \
+      prefecthq/prefect:3.2.13-python3.12 \
+      sh -c "pip install prefect-docker && prefect server start"
     ```
 3. Create a Docker work pool in Prefect UI or run:
     ```
@@ -57,5 +57,9 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
     docker compose build
     ```
+6. Deploy the pipeline as a Prefect flow:
+   ```
+   python -m main.deploy
+   ```
 
-Your prefect UI should now have two new deployments for forex (fx-data-pipeline) and SP500 stocks (sp-stocks-data-pipeline) data respectively.
+Your prefect UI should now have two new deployments for forex (fx-data-pipeline) and S&P stocks (sp-stocks-data-pipeline) data respectively.
