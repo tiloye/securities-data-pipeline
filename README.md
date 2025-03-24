@@ -22,22 +22,31 @@ Ensure you have Docker installed on your system. The following steps were tested
 2. Start Prefect server in a Docker container:
     ```
     docker run -d \
-      -v /var/run/docker.sock:/var/run/docker.sock \
-      -v ./data:/root/.prefect \
-      -e PREFECT_API_URL=http://localhost:4200/api \
-      --network=host \
-      --restart=always \
-      --name=prefect_server \
-      prefecthq/prefect:3.2.13-python3.12 \
-      sh -c "pip install prefect-docker && prefect server start"
+    -v ./data:/root/.prefect \
+    -e PREFECT_API_URL=http://localhost:4200/api \
+    --network=host \
+    --restart=always \
+    --name=prefect_server \
+    prefecthq/prefect:3.2.13-python3.12 \
+    prefect server start
     ```
 3. Create a Docker work pool in Prefect UI or run:
     ```
     docker exec prefect_server prefect work-pool create --type docker docker-pool
     ```
-4. Start a worker for the docker pool in a new terminal:
+4. Start a worker that polls the docker work pool for scheduled runs in a new container:
     ```
-    docker exec prefect_server prefect worker start --name default-worker --pool docker-pool
+    docker run -d \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -e PREFECT_API_URL="http://localhost:4200/api" \
+    --network=host \
+    --name=prefect_docker_worker \
+    --restart=always prefecthq/prefect:3.2.13-python3.12 \
+    prefect worker start \
+    --name docker-worker \
+    --pool docker-pool \
+    --type docker \
+    --install-policy if-not-present
     ```
 
 5. Clone the repository:
@@ -62,4 +71,4 @@ Ensure you have Docker installed on your system. The following steps were tested
    python -m main.deploy
    ```
 
-Your prefect UI should now have two new deployments for forex (fx-data-pipeline) and S&P stocks (sp-stocks-data-pipeline) data respectively.
+Your Prefect UI should now have two new deployments for forex (fx-data-pipeline) and S&P stocks (sp-stocks-data-pipeline) data respectively.
