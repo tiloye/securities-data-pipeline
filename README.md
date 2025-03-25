@@ -1,3 +1,6 @@
+# Securities Data Pipeline
+![pipeline](pipeline.png)
+
 # Overview
 A data pipeline is a series of steps that automate the extraction, transformation, and loading (ETL) of data from various sources into a data warehouse or data lake. This process is crucial for organizations that rely heavily on data-driven decision making. In investment management and algorithmic trading, a data pipeline is essential for:
 * Gathering and analyzing historical market data to identify trends, patterns, and potential investment opportunities.
@@ -72,3 +75,8 @@ Ensure you have Docker installed on your system. The following steps were tested
    ```
 
 Your Prefect UI should now have two new deployments for forex (fx-data-pipeline) and S&P stocks (sp-stocks-data-pipeline) data respectively.
+
+
+# Resources
+* [Data Engineering Zoomcamp, Modules 1 & 2](https://github.com/dataTalksClub/data-engineering-zoomcamp/)
+* [Prefect Docs](https://docs.prefect.io/)
