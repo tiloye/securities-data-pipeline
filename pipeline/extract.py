@@ -1,0 +1,87 @@
+import datetime as dt
+
+import pandas as pd
+import yfinance as yf
+
+from .config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT
+
+######### Symbols data extractors #########
+
+
+def get_sp_stock_symbols_from_source() -> pd.DataFrame:
+    cols = ["Symbol", "Security", "Company", "GICS Sector", "GICS Sub-Industry"]
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_{}_companies"
+    sp_stocks = pd.concat(
+        [pd.read_html(url.format(index))[0] for index in [400, 500, 600]]
+    )
+
+    return sp_stocks[cols]
+
+
+def get_fx_symbols_from_source() -> pd.DataFrame:
+    fx_symbols = [
+        "EURUSD=X",
+        "GBPUSD=X",
+        "AUDUSD=X",
+        "NZDUSD=X",
+        "JPY=X",
+        "CHF=X",
+        "CAD=X",
+    ]
+    return pd.Series(fx_symbols, name="Symbol").to_frame()
+
+
+def get_symbols_from_s3(asset_category: str) -> list[str]:
+    """Extract symbols or historical data from the object store."""
+
+    s3_storage_options = {
+        "key": AWS_ACCESS_KEY,
+        "secret": AWS_SECRET_KEY,
+        "endpoint_url": S3_ENDPOINT,
+    }
+
+    path = f"{DATA_PATH}/symbols/{asset_category}"
+    symbols = (
+        pd.read_csv(
+            f"{path}.csv", storage_options=s3_storage_options, usecols=["symbol"]
+        )
+        .squeeze()
+        .to_list()
+    )
+    return symbols
+
+
+######### Price data extractors #########
+
+YF_ERRORS = {"fx": [], "sp_stocks": []}
+
+
+def get_prices_from_source(
+    symbols: list[str],
+    start_date: str | dt.date | None = None,
+    end_date: str | dt.date | None = None,
+) -> pd.DataFrame:
+    bars = yf.download(
+        symbols, start=start_date, end=end_date, group_by="ticker", auto_adjust=True
+    )
+    return bars
+
+
+def log_failed_dowloads(asset_category: str) -> None:
+    symbols_with_errors = yf.shared._ERRORS
+    if symbols_with_errors:
+        YF_ERRORS[asset_category].extend(list(symbols_with_errors.keys()))
+
+
+def get_prices_from_s3(asset_category: str) -> pd.DataFrame | None:
+    """Extract historical price data from the object store."""
+
+    s3_storage_options = {
+        "key": AWS_ACCESS_KEY,
+        "secret": AWS_SECRET_KEY,
+        "endpoint_url": S3_ENDPOINT,
+    }
+
+    path = f"{DATA_PATH}/price_history/{asset_category}.parquet"
+    price_data = pd.read_parquet(path, storage_options=s3_storage_options)
+    return price_data
