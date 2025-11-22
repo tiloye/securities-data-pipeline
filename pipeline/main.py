@@ -11,7 +11,7 @@ from pipeline.extract import (
     get_symbols_from_s3,
     log_failed_dowloads,
 )
-from pipeline.load import load
+from pipeline.load import load_to_s3
 from pipeline.transform import (
     transform_fx_symbol_df,
     transform_price_df,
@@ -28,14 +28,14 @@ if TYPE_CHECKING:
 def etl_fx_symbols() -> None:
     fx_symbols_df = get_fx_symbols_from_source()
     fx_symbols_df = transform_fx_symbol_df(fx_symbols_df)
-    load(fx_symbols_df, "symbols", "fx")
+    load_to_s3(fx_symbols_df, "symbols", "fx")
     print(f"Successfully loaded symbols data for {len(fx_symbols_df)} forex pairs.")
 
 
 def etl_sp_stocks_symbols() -> None:
     stock_symbols_df = get_sp_stock_symbols_from_source()
     stock_symbols_df = transform_stocks_symbol_df(stock_symbols_df)
-    load(stock_symbols_df, "symbols", "sp_stocks")
+    load_to_s3(stock_symbols_df, "symbols", "sp_stocks")
     print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
 
@@ -75,7 +75,7 @@ def etl_bars_in_chunk(
         )
         if price_history.empty:
             continue
-        load(price_history, "price_history", asset_category)
+        load_to_s3(price_history, "price_history", asset_category)
     if len(symbols) == len(YF_ERRORS[asset_category]):
         raise ValueError("Could not transform empty dataframes")
 
@@ -97,7 +97,7 @@ def etl_bars(
         )
         if price_history.empty:
             raise ValueError("Tranformed dataframe is empty")
-        load(price_history, "price_history", asset_category)
+        load_to_s3(price_history, "price_history", asset_category)
 
     print(
         f"Successfully loaded {asset_category} price history from {start_date} to {end_date}."
