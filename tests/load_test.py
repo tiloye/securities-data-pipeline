@@ -3,17 +3,18 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from minio import Minio
+from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 
-from pipeline.load import load_to_s3, load_to_db
-from pipeline.extract import get_prices_from_s3
 from pipeline.config import (
-    BUCKET_NAME,
-    S3_ENDPOINT,
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
+    BUCKET_NAME,
     DATABASE_URL,
+    DATA_PATH,
+    S3_ENDPOINT,
 )
+from pipeline.load import load_to_dw, load_to_s3
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = create_engine(DATABASE_URL)
@@ -37,7 +38,7 @@ def s3_bucket():
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_symbols_data(asset_category):
+def test_load_symbols_data_to_s3(asset_category):
     symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
     )
@@ -50,29 +51,58 @@ def test_load_symbols_data(asset_category):
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_price_data_to_s3(asset_category):
-    price_df = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+def test_load_symbols_data_to_dw(asset_category):
+    symbols = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
     )
 
-    load_to_s3(price_df, "price_history", asset_category)
+    load_to_dw(symbols, "symbols", asset_category)
 
-    s3_objects = client.list_objects(BUCKET_NAME, recursive=True)
-    s3_objects = [obj.object_name for obj in s3_objects]
-    assert f"price_history/{asset_category}.parquet" in s3_objects
+    loaded_data = pd.read_sql_table(f"symbols_{asset_category}", con=engine)
+
+    pd.testing.assert_frame_equal(symbols, loaded_data)
+
+    with engine.connect() as con:
+        con.execute(text(f"DROP TABLE symbols_{asset_category};"))
+        con.commit()
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_price_data_to_db(asset_category):
+def test_load_price_data_to_s3(asset_category):
+    price_df = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+    )
+    price_df["date"] = pd.to_datetime(price_df["date"]).astype("datetime64[us]")
+
+    load_to_s3(price_df, "price_history", asset_category)
+
+    loaded_price_df = pd.read_parquet(
+        f"{DATA_PATH}/price_history/{asset_category}.parquet",
+        storage_options={
+            "key": AWS_ACCESS_KEY,
+            "secret": AWS_SECRET_KEY,
+            "endpoint_url": S3_ENDPOINT,
+        },
+    )
+
+    pd.testing.assert_frame_equal(price_df, loaded_price_df)
+
+
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_load_price_data_to_dw(asset_category):
     price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
 
-    load_to_db(price_df, "price_history", asset_category)
+    load_to_dw(price_df, "price_history", asset_category)
 
     loaded_data = pd.read_sql_table(f"price_history_{asset_category}", con=engine)
 
     pd.testing.assert_frame_equal(price_df, loaded_data)
+
+    with engine.connect() as con:
+        con.execute(text(f"DROP TABLE price_history_{asset_category};"))
+        con.commit()
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
@@ -96,7 +126,14 @@ def test_update_price_on_s3(asset_category):
         .reset_index(drop=True)
     )
 
-    loaded_price_df = get_prices_from_s3(asset_category)
+    loaded_price_df = pd.read_parquet(
+        f"{DATA_PATH}/price_history/{asset_category}.parquet",
+        storage_options={
+            "key": AWS_ACCESS_KEY,
+            "secret": AWS_SECRET_KEY,
+            "endpoint_url": S3_ENDPOINT,
+        },
+    )
 
     pd.testing.assert_frame_equal(loaded_price_df, expected_df)
 
@@ -107,21 +144,19 @@ def test_update_price_on_db(asset_category):
     hist_price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
-    load_to_db(hist_price_df, "price_history", asset_category)
+    load_to_dw(hist_price_df, "price_history", asset_category)
 
     # Load price update
     price_update = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"{asset_category}_price_data_update.csv")
     )
-    load_to_db(price_update, "price_history", asset_category)
+    load_to_dw(price_update, "price_history", asset_category)
 
     # Verify merged data
     expected_df = (
-        (
-            pd.concat([hist_price_df, price_update], ignore_index=True)
-            .sort_values(["date", "symbol"])
-            .reset_index(drop=True)
-        )
+        pd.concat([hist_price_df, price_update], ignore_index=True)
+        .sort_values(["date", "symbol"])
+        .reset_index(drop=True)
     )
 
     loaded_price_df = (
@@ -131,6 +166,10 @@ def test_update_price_on_db(asset_category):
     )
 
     pd.testing.assert_frame_equal(loaded_price_df, expected_df)
+
+    with engine.connect() as con:
+        con.execute(text(f"DROP TABLE price_history_{asset_category};"))
+        con.commit()
 
 
 if __name__ == "__main__":

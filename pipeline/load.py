@@ -31,8 +31,13 @@ def load_to_s3(df: DataFrame, dataset: str, asset_category: str) -> None:
         raise ValueError(f"Unknown dataset, {dataset}")
 
 
-def load_to_db(df: DataFrame, dataset: str, asset_category: str) -> None:
+def load_to_dw(df: DataFrame, dataset: str, asset_category: str) -> None:
     engine = create_engine(DATABASE_URL)
     table_name = f"{dataset}_{asset_category}"
-
-    df.to_sql(table_name, index=False, con=engine, if_exists="append")
+    
+    if dataset == "symbols":
+        df.to_sql(table_name, index=False, con=engine, if_exists="replace")
+    elif dataset == "price_history":
+        df.to_sql(table_name, index=False, con=engine, if_exists="append")
+    else:
+        raise ValueError(f"Unknown dataset, {dataset}")

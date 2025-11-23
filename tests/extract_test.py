@@ -1,4 +1,3 @@
-from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
@@ -57,11 +56,16 @@ def s3_bucket():
 
     # Load price data into S3 bucket
     fx_price_data = pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_prices.csv"))
+    fx_price_data["date"] = pd.to_datetime(fx_price_data["date"])
+
     stocks_price_data = pd.read_csv(
         TEST_DATA_DIR.joinpath("processed_sp_stocks_prices.csv")
     )
+    stocks_price_data["date"] = pd.to_datetime(stocks_price_data["date"])
+
     fx_price_path = f"{DATA_PATH}/price_history/fx.parquet"
     stock_price_path = f"{DATA_PATH}/price_history/sp_stocks.parquet"
+
     fx_price_data.to_parquet(
         fx_price_path, index=False, storage_options=s3_storage_options
     )
@@ -87,10 +91,35 @@ def test_get_fx_symbols_from_s3(asset_category):
     assert extracted_data == expected_data
 
 
-def test_get_prices_from_s3():
-    expected_data = pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_prices.csv"))
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_get_prices_from_s3(asset_category):
+    expected_data = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+        parse_dates=["date"],
+    )
 
-    price_df = get_prices_from_s3("fx")
+    price_df = get_prices_from_s3(asset_category)
+
+    pd.testing.assert_frame_equal(price_df, expected_data)
+
+
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_get_prices_from_s3_by_date(asset_category):
+    start_date = pd.Timestamp("2006-05-19")
+    end_date = pd.Timestamp("2006-05-22")
+
+    expected_data = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+    )
+    expected_data["date"] = pd.to_datetime(expected_data["date"])
+    mask = (expected_data["date"] >= start_date) & (expected_data["date"] <= end_date)
+    expected_data = expected_data.loc[mask].reset_index(drop=True)
+
+    price_df = get_prices_from_s3(
+        asset_category,
+        start=start_date,
+        end=end_date,
+    ).reset_index(drop=True)
 
     pd.testing.assert_frame_equal(price_df, expected_data)
 

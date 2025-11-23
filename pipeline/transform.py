@@ -32,7 +32,7 @@ def transform_price_df(df: pd.DataFrame, asset_category: str) -> pd.DataFrame:
     df = df.drop(cols_without_data, axis=1)
     df = df.stack("Ticker", future_stack=True).reset_index()
     df.columns = df.columns.str.lower().rename(None)
-    df["date"] = df["date"].dt.date
+    df["date"] = df["date"].dt.tz_localize(None).astype("datetime64[us]")
     df.rename(columns={"ticker": "symbol"}, inplace=True)
     if asset_category == "fx":
         df["symbol"] = (

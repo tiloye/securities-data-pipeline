@@ -3,47 +3,53 @@ from __future__ import annotations
 import datetime as dt
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from pipeline.extract import (
     YF_ERRORS,
     get_fx_symbols_from_source,
     get_prices_from_source,
     get_sp_stock_symbols_from_source,
     get_symbols_from_s3,
+    get_prices_from_s3,
     log_failed_dowloads,
 )
-from pipeline.load import load_to_s3
+from pipeline.load import load_to_s3, load_to_dw
 from pipeline.transform import (
     transform_fx_symbol_df,
     transform_price_df,
     transform_stocks_symbol_df,
 )
 
-if TYPE_CHECKING:
-    import pandas as pd
-
 
 ############## Symbols ETL ##############
 
 
-def etl_fx_symbols() -> None:
+def etl_fx_symbols_to_s3() -> None:
     fx_symbols_df = get_fx_symbols_from_source()
     fx_symbols_df = transform_fx_symbol_df(fx_symbols_df)
     load_to_s3(fx_symbols_df, "symbols", "fx")
     print(f"Successfully loaded symbols data for {len(fx_symbols_df)} forex pairs.")
 
 
-def etl_sp_stocks_symbols() -> None:
+def etl_sp_stocks_symbols_to_s3() -> None:
     stock_symbols_df = get_sp_stock_symbols_from_source()
     stock_symbols_df = transform_stocks_symbol_df(stock_symbols_df)
     load_to_s3(stock_symbols_df, "symbols", "sp_stocks")
     print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
 
-def etl_symbols(asset_category: str) -> None:
+def etl_symbols_to_s3(asset_category: str) -> None:
     if asset_category == "fx":
-        etl_fx_symbols()
+        etl_fx_symbols_to_s3()
     else:
-        etl_sp_stocks_symbols()
+        etl_sp_stocks_symbols_to_s3()
+
+
+def el_symbols_to_dw(asset_category: str) -> None:
+    symbols_df = get_symbols_from_s3(asset_category, symbols_only=False)
+    load_to_dw(symbols_df, "symbols", asset_category)
+
+    print(f"Successfully loaded {asset_category} symbols data to the database.")
 
 
 ############# Price History ETL #############
@@ -52,8 +58,8 @@ def etl_symbols(asset_category: str) -> None:
 def et_price_history_from_source(
     asset_category: str,
     symbols: list[str],
-    start_date: str | dt.date,
-    end_date: str | dt.date,
+    start_date: str | dt.date | None = None,
+    end_date: str | dt.date | None = None,
 ) -> pd.DataFrame:
     price_history = get_prices_from_source(symbols, start_date, end_date)
     log_failed_dowloads(asset_category)
@@ -64,8 +70,8 @@ def et_price_history_from_source(
 def etl_bars_in_chunk(
     asset_category: str,
     symbols: list[str],
-    start_date: str | dt.date,
-    end_date: str | dt.date,
+    start_date: str | dt.date | None,
+    end_date: str | dt.date | None,
     chunk_size: int,
 ) -> None:
     for idx in range(0, len(symbols), chunk_size):
@@ -80,11 +86,11 @@ def etl_bars_in_chunk(
         raise ValueError("Could not transform empty dataframes")
 
 
-def etl_bars(
+def etl_bars_to_s3(
     asset_category: str,
     symbols: list[str],
-    start_date: str | dt.date,
-    end_date: str | dt.date,
+    start_date: str | dt.date | None = None,
+    end_date: str | dt.date | None = None,
     chunk_size: int = 500,
 ) -> None:
     print(f"Requesting {asset_category} price from {start_date} to {end_date}")
@@ -104,6 +110,20 @@ def etl_bars(
     )
 
 
+def el_bars_to_dw(
+    asset_category: str,
+    start: str | dt.date | None = None,
+    end: str | dt.date | None = None,
+) -> None:
+    if start and end:
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+    prices_df = get_prices_from_s3(asset_category, start, end)
+    load_to_dw(prices_df, "price_history", asset_category)
+
+    print("Successfully loaded FX price history data to the database.")
+
+
 ############### Combined ETL ##############
 
 
@@ -113,7 +133,7 @@ def get_start_end_dates() -> tuple[dt.date, dt.date]:
     return start_date, end_date
 
 
-def etl(
+def etl_s3(
     asset_category: str,
     symbols: list[str] | None = None,
     start_date: str | dt.date | None = None,
@@ -128,13 +148,13 @@ def etl(
     try:
         symbols = symbols if symbols else get_symbols_from_s3(asset_category)
     except Exception:
-        etl_symbols(asset_category)
+        etl_symbols_to_s3(asset_category)
         symbols = get_symbols_from_s3(asset_category)
 
     if not (start_date and end_date):
         start_date, end_date = get_start_end_dates()
 
-    etl_bars(asset_category, symbols, start_date, end_date, chunk_size)
+    etl_bars_to_s3(asset_category, symbols, start_date, end_date, chunk_size)
 
     if YF_ERRORS[asset_category]:
         raise RuntimeError(
@@ -147,6 +167,15 @@ def etl(
             """
         )
 
+
+def el_dw(asset_category: str):
+    el_symbols_to_dw(asset_category)
+    el_bars_to_dw(asset_category)
+
+
 if __name__ == "__main__":
-    etl("fx")
-    # etl("sp_stocks")
+    etl_s3("fx")
+    el_dw("fx")
+
+    # etl_s3("sp_stocks")
+    # el_db("sp_stocks")

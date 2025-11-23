@@ -31,8 +31,10 @@ def get_fx_symbols_from_source() -> pd.DataFrame:
     return pd.Series(fx_symbols, name="Symbol").to_frame()
 
 
-def get_symbols_from_s3(asset_category: str) -> list[str]:
-    """Extract symbols or historical data from the object store."""
+def get_symbols_from_s3(
+    asset_category: str, symbols_only: bool = True
+) -> list[str] | pd.DataFrame:
+    """Extract symbols data from the object store."""
 
     s3_storage_options = {
         "key": AWS_ACCESS_KEY,
@@ -41,13 +43,11 @@ def get_symbols_from_s3(asset_category: str) -> list[str]:
     }
 
     path = f"{DATA_PATH}/symbols/{asset_category}"
-    symbols = (
-        pd.read_csv(
-            f"{path}.csv", storage_options=s3_storage_options, usecols=["symbol"]
-        )
-        .squeeze()
-        .to_list()
-    )
+    symbols = pd.read_csv(f"{path}.csv", storage_options=s3_storage_options)
+
+    if symbols_only:
+        symbols = symbols["symbol"].to_list()
+        return symbols
     return symbols
 
 
@@ -58,11 +58,11 @@ YF_ERRORS = {"fx": [], "sp_stocks": []}
 
 def get_prices_from_source(
     symbols: list[str],
-    start_date: str | dt.date | None = None,
+    start: str | dt.date | None = None,
     end_date: str | dt.date | None = None,
 ) -> pd.DataFrame:
     bars = yf.download(
-        symbols, start=start_date, end=end_date, group_by="ticker", auto_adjust=True
+        symbols, start=start, end=end_date, group_by="ticker", auto_adjust=True
     )
     return bars
 
@@ -73,7 +73,11 @@ def log_failed_dowloads(asset_category: str) -> None:
         YF_ERRORS[asset_category].extend(list(symbols_with_errors.keys()))
 
 
-def get_prices_from_s3(asset_category: str) -> pd.DataFrame | None:
+def get_prices_from_s3(
+    asset_category: str,
+    start: pd.Timestamp | None = None,
+    end: pd.Timestamp | None = None,
+) -> pd.DataFrame | None:
     """Extract historical price data from the object store."""
 
     s3_storage_options = {
@@ -83,5 +87,16 @@ def get_prices_from_s3(asset_category: str) -> pd.DataFrame | None:
     }
 
     path = f"{DATA_PATH}/price_history/{asset_category}.parquet"
-    price_data = pd.read_parquet(path, storage_options=s3_storage_options)
+
+    if start and end:
+        price_data = pd.read_parquet(
+            path,
+            storage_options=s3_storage_options,
+            filters=[
+                ("date", ">=", start),
+                ("date", "<=", end),
+            ],
+        ).query(f"date >= '{start}' and date <= '{end}'")
+    else:
+        price_data = pd.read_parquet(path, storage_options=s3_storage_options)
     return price_data
