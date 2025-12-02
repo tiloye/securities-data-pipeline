@@ -31,10 +31,7 @@ client = Minio(
 
 
 @pytest.fixture(autouse=True, scope="module")
-def s3_bucket():
-    # Create S3 bucket
-    client.make_bucket(BUCKET_NAME)
-
+def s3_data():
     # Define S3 storage options
     s3_storage_options = {
         "key": AWS_ACCESS_KEY,
@@ -77,7 +74,6 @@ def s3_bucket():
     objs = [obj.object_name for obj in client.list_objects(BUCKET_NAME, recursive=True)]
     for obj in objs:
         client.remove_object(BUCKET_NAME, obj)
-    client.remove_bucket(BUCKET_NAME)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))

@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from minio import Minio
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 
@@ -29,29 +28,11 @@ SP_SYMBOLS = ["AAPL", "INVALID_SYMBOL_1", "MSFT", "BRK-A", "BRK-B", "INVALID_SYM
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = create_engine(DATABASE_URL)
 
-
-client = Minio(
-    S3_ENDPOINT.replace("http://", ""),
-    access_key=AWS_ACCESS_KEY,
-    secret_key=AWS_SECRET_KEY,
-    secure=False,
-)
-
 s3_storage_options = {
     "key": AWS_ACCESS_KEY,
     "secret": AWS_SECRET_KEY,
     "endpoint_url": S3_ENDPOINT,
 }
-
-
-@pytest.fixture(autouse=True, scope="module")
-def s3_bucket():
-    client.make_bucket(BUCKET_NAME)
-    yield
-    objs = [obj.object_name for obj in client.list_objects(BUCKET_NAME, recursive=True)]
-    for obj in objs:
-        client.remove_object(BUCKET_NAME, obj)
-    client.remove_bucket(BUCKET_NAME)
 
 
 ########## Tests for Symbols ETL ##############
@@ -77,7 +58,7 @@ def test_s3_etl_fx_symbols():
     pd.testing.assert_frame_equal(loaded_data, expected_data)
 
 
-def test_s3_etl_sp_symbols(monkeypatch):
+def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
     monkeypatch.setattr(
         "pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
@@ -169,15 +150,7 @@ def price_data():
     return _price_data
 
 
-@pytest.fixture
-def drop_dw_price_history_tables():
-    yield
-    with engine.connect() as con:
-        for asset_category in ("fx", "sp_stocks"):
-            con.execute(text(f"DROP TABLE IF EXISTS price_history_{asset_category};"))
-        con.commit()
-
-
+@pytest.mark.usefixtures("remove_s3_objects")
 class TestETLBars:
     def _etl_bars_to_s3(
         self, monkeypatch, price_data, asset_category, start=None, end=None
@@ -214,9 +187,7 @@ class TestETLBars:
         pd.testing.assert_frame_equal(loaded_data, expected_data)
 
     @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-    def test_dw_el_bars(
-        self, monkeypatch, price_data, asset_category, drop_dw_price_history_tables
-    ):
+    def test_dw_el_bars(self, monkeypatch, price_data, asset_category, drop_dw_tables):
         self._etl_bars_to_s3(monkeypatch, price_data, asset_category)
 
         el_bars_to_dw(asset_category)
@@ -234,7 +205,7 @@ class TestETLBars:
 
     @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
     def test_s3_dw_etl_update_existing_data(
-        self, monkeypatch, price_data, asset_category, drop_dw_price_history_tables
+        self, monkeypatch, price_data, asset_category, drop_dw_tables
     ):
         # First ETL run
         if asset_category == "sp_stocks":
@@ -301,7 +272,9 @@ class TestETLBars:
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_s3_etl_bars_in_chunk(monkeypatch, price_data, asset_category):
+def test_s3_etl_bars_in_chunk(
+    monkeypatch, price_data, asset_category, remove_s3_objects
+):
     monkeypatch.setattr(
         "pipeline.extract.yf.download",
         lambda *args, **kwargs: price_data(asset_category, args[0]),

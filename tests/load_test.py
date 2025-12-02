@@ -2,14 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from minio import Minio
-from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 
 from pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
-    BUCKET_NAME,
     DATABASE_URL,
     DATA_PATH,
     S3_ENDPOINT,
@@ -19,39 +16,29 @@ from pipeline.load import load_to_dw, load_to_s3
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = create_engine(DATABASE_URL)
 
-client = Minio(
-    S3_ENDPOINT.replace("http://", ""),
-    access_key=AWS_ACCESS_KEY,
-    secret_key=AWS_SECRET_KEY,
-    secure=False,
-)
-
-
-@pytest.fixture(autouse=True, scope="module")
-def s3_bucket():
-    client.make_bucket(BUCKET_NAME)
-    yield
-    objs = [obj.object_name for obj in client.list_objects(BUCKET_NAME, recursive=True)]
-    for obj in objs:
-        client.remove_object(BUCKET_NAME, obj)
-    client.remove_bucket(BUCKET_NAME)
-
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_symbols_data_to_s3(asset_category):
+def test_load_symbols_data_to_s3(asset_category, remove_s3_objects):
     symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
     )
 
     load_to_s3(symbols, "symbols", asset_category)
 
-    s3_objects = client.list_objects(BUCKET_NAME, recursive=True)
-    s3_objects = [obj.object_name for obj in s3_objects]
-    assert f"symbols/{asset_category}.csv" in s3_objects
+    loaded_symbols = pd.read_csv(
+        f"{DATA_PATH}/symbols/{asset_category}.csv",
+        storage_options={
+            "key": AWS_ACCESS_KEY,
+            "secret": AWS_SECRET_KEY,
+            "endpoint_url": S3_ENDPOINT,
+        },
+    )
+
+    pd.testing.assert_frame_equal(symbols, loaded_symbols)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_symbols_data_to_dw(asset_category):
+def test_load_symbols_data_to_dw(asset_category, drop_dw_tables):
     symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
     )
@@ -62,13 +49,9 @@ def test_load_symbols_data_to_dw(asset_category):
 
     pd.testing.assert_frame_equal(symbols, loaded_data)
 
-    with engine.connect() as con:
-        con.execute(text(f"DROP TABLE symbols_{asset_category};"))
-        con.commit()
-
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_price_data_to_s3(asset_category):
+def test_load_price_data_to_s3(asset_category, remove_s3_objects):
     price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
     )
@@ -89,7 +72,7 @@ def test_load_price_data_to_s3(asset_category):
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_load_price_data_to_dw(asset_category):
+def test_load_price_data_to_dw(asset_category, drop_dw_tables):
     price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
@@ -100,13 +83,9 @@ def test_load_price_data_to_dw(asset_category):
 
     pd.testing.assert_frame_equal(price_df, loaded_data)
 
-    with engine.connect() as con:
-        con.execute(text(f"DROP TABLE price_history_{asset_category};"))
-        con.commit()
-
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_update_price_on_s3(asset_category):
+def test_update_price_on_s3(asset_category, remove_s3_objects):
     # Load historical price
     hist_price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
@@ -139,7 +118,7 @@ def test_update_price_on_s3(asset_category):
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_update_price_on_db(asset_category):
+def test_update_price_on_dw(asset_category, drop_dw_tables):
     # Load historical price
     hist_price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
@@ -166,10 +145,6 @@ def test_update_price_on_db(asset_category):
     )
 
     pd.testing.assert_frame_equal(loaded_price_df, expected_df)
-
-    with engine.connect() as con:
-        con.execute(text(f"DROP TABLE price_history_{asset_category};"))
-        con.commit()
 
 
 if __name__ == "__main__":
