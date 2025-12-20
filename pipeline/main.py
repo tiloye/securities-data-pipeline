@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import argparse
 import datetime as dt
-from typing import TYPE_CHECKING
 
 import pandas as pd
 from pipeline.extract import (
@@ -173,9 +173,90 @@ def el_dw(asset_category: str):
     el_bars_to_dw(asset_category)
 
 
-if __name__ == "__main__":
-    etl_s3("fx")
+def main_fx(
+    symbols: list[str] | None,
+    start_date: str | dt.date | None = None,
+    end_date: str | dt.date | None = None,
+    chunk_size: int = 500,
+) -> None:
+    try:
+        etl_s3(
+            "fx",
+            symbols=symbols,
+            start_date=start_date,
+            end_date=end_date,
+            chunk_size=chunk_size,
+        )
+    except RuntimeError as e:
+        print(f"ETL Warning: {e}")
+
     el_dw("fx")
 
-    # etl_s3("sp_stocks")
-    # el_db("sp_stocks")
+
+def main_sp_stocks(
+    symbols: list[str] | None,
+    start_date: str | dt.date | None = None,
+    end_date: str | dt.date | None = None,
+    chunk_size: int = 500,
+) -> None:
+    try:
+        etl_s3(
+            "sp_stocks",
+            symbols=symbols,
+            start_date=start_date,
+            end_date=end_date,
+            chunk_size=chunk_size,
+        )
+    except RuntimeError as e:
+        print(f"ETL Warning: {e}")
+    el_dw("sp_stocks")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Securities Data Pipeline ETL")
+    parser.add_argument(
+        "--asset-category",
+        type=str,
+        choices=["fx", "sp_stocks"],
+        required=False,
+        help="Asset category to process (fx or sp_stocks). If not provided, both will be processed.",
+    )
+    parser.add_argument(
+        "--symbols", nargs="+", help="List of symbols to process.", default=None
+    )
+    parser.add_argument(
+        "--start-date",
+        type=dt.date.fromisoformat,
+        required=False,
+        help="Start date for price data in YYYY-MM-DD format. Defaults to yesterday if not provided.",
+    )
+    parser.add_argument(
+        "--end-date",
+        type=dt.date.fromisoformat,
+        required=False,
+        help="End date for price data in YYYY-MM-DD format. Defaults to today if not provided.",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=500,
+        help="Number of symbols to process in each chunk when fetching price data.",
+    )
+
+    args = parser.parse_args()
+    symbols = args.symbols
+    start_date = args.start_date
+    end_date = args.end_date
+    chunk_size = args.chunk_size
+
+    if args.asset_category == "fx":
+        main_fx(symbols, start_date, end_date, chunk_size)
+    elif args.asset_category == "sp_stocks":
+        main_sp_stocks(symbols, start_date, end_date, chunk_size)
+    else:
+        main_fx(symbols, start_date, end_date)
+        main_sp_stocks(symbols, start_date, end_date, chunk_size)
+
+
+if __name__ == "__main__":
+    main()

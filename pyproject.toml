@@ -15,6 +15,9 @@ dependencies = [
     "prefect>=3.1.15",
 ]
 
+[project.scripts]
+run-pipeline = "pipeline.main:main"
+
 [tool.uv]
 dev-dependencies = [
     "fastparquet>=2024.11.0",
