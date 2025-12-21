@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import datetime as dt
 
 import pandas as pd
@@ -127,9 +128,24 @@ def el_bars_to_dw(
 ############### Combined ETL ##############
 
 
-def get_start_end_dates() -> tuple[dt.date, dt.date]:
-    end_date = dt.datetime.now(dt.timezone.utc).date()
-    start_date = end_date - dt.timedelta(days=1)
+def get_start_end_dates(
+    start_date: str | dt.date | None = None, end_date: str | dt.date | None = None
+) -> tuple[dt.date, dt.date]:
+    if start_date or end_date:
+        if isinstance(start_date, str):
+            start_date = dt.date.fromisoformat(start_date)
+
+        if isinstance(end_date, str):
+            end_date = dt.date.fromisoformat(end_date)
+
+        if start_date is None and end_date is not None:
+            start_date = dt.date(2000, 1, 1)
+        elif end_date is None and start_date is not None:
+            end_date = dt.date.today()
+    else:
+        end_date = dt.date.today()
+        start_date = end_date - dt.timedelta(days=1)
+
     return start_date, end_date
 
 
@@ -151,8 +167,7 @@ def etl_s3(
         etl_symbols_to_s3(asset_category)
         symbols = get_symbols_from_s3(asset_category)
 
-    if not (start_date and end_date):
-        start_date, end_date = get_start_end_dates()
+    start_date, end_date = get_start_end_dates(start_date, end_date)
 
     etl_bars_to_s3(asset_category, symbols, start_date, end_date, chunk_size)
 
@@ -222,7 +237,10 @@ def main() -> None:
         help="Asset category to process (fx or sp_stocks). If not provided, both will be processed.",
     )
     parser.add_argument(
-        "--symbols", nargs="+", help="List of symbols to process.", default=None
+        "--symbols",
+        type=ast.literal_eval,
+        help="List of symbols to process.",
+        default=None,
     )
     parser.add_argument(
         "--start-date",
