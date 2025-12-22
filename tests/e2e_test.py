@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 
-from pipeline.config import (
+from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     BUCKET_NAME,
@@ -13,8 +13,8 @@ from pipeline.config import (
     S3_ENDPOINT,
     DATABASE_URL,
 )
-from pipeline.extract import YF_ERRORS
-from pipeline.main import (
+from py_pipeline.extract import YF_ERRORS
+from py_pipeline.main import (
     etl_bars_to_s3,
     etl_fx_symbols_to_s3,
     etl_sp_stocks_symbols_to_s3,

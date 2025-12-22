@@ -5,7 +5,7 @@ import ast
 import datetime as dt
 
 import pandas as pd
-from pipeline.extract import (
+from py_pipeline.extract import (
     YF_ERRORS,
     get_fx_symbols_from_source,
     get_prices_from_source,
@@ -14,8 +14,8 @@ from pipeline.extract import (
     get_prices_from_s3,
     log_failed_dowloads,
 )
-from pipeline.load import load_to_s3, load_to_dw
-from pipeline.transform import (
+from py_pipeline.load import load_to_s3, load_to_dw
+from py_pipeline.transform import (
     transform_fx_symbol_df,
     transform_price_df,
     transform_stocks_symbol_df,

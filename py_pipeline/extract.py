@@ -15,7 +15,10 @@ def get_sp_stock_symbols_from_source() -> pd.DataFrame:
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
     }
     sp_stocks = pd.concat(
-        [pd.read_html(url.format(index), storage_options=storage_options)[0] for index in [400, 500, 600]]
+        [
+            pd.read_html(url.format(index), storage_options=storage_options)[0]
+            for index in [400, 500, 600]
+        ]
     )
 
     return sp_stocks[cols]

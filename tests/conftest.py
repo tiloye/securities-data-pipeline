@@ -4,7 +4,7 @@ from prefect.testing.utilities import prefect_test_harness
 from sqlalchemy import text
 from sqlalchemy.engine import create_engine
 
-from pipeline.config import (
+from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     BUCKET_NAME,

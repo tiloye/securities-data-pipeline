@@ -4,14 +4,14 @@ import pandas as pd
 import pytest
 from sqlalchemy.engine import create_engine
 
-from pipeline.config import (
+from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     DATABASE_URL,
     DATA_PATH,
     S3_ENDPOINT,
 )
-from pipeline.load import load_to_dw, load_to_s3
+from py_pipeline.load import load_to_dw, load_to_s3
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = create_engine(DATABASE_URL)

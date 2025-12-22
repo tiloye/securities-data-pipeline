@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from pipeline.transform import (
+from py_pipeline.transform import (
     transform_stocks_symbol_df,
     transform_fx_symbol_df,
     transform_price_df,

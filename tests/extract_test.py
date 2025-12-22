@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from minio import Minio
 
-from pipeline.extract import (
+from py_pipeline.extract import (
     get_symbols_from_s3,
     get_prices_from_s3,
     get_prices_from_source,
@@ -12,7 +12,7 @@ from pipeline.extract import (
     yf,
     YF_ERRORS,
 )
-from pipeline.config import (
+from py_pipeline.config import (
     BUCKET_NAME,
     S3_ENDPOINT,
     AWS_ACCESS_KEY,
