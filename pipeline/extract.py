@@ -9,10 +9,13 @@ from .config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT
 
 
 def get_sp_stock_symbols_from_source() -> pd.DataFrame:
-    cols = ["Symbol", "Security", "Company", "GICS Sector", "GICS Sub-Industry"]
+    cols = ["Symbol", "Security", "GICS Sector", "GICS Sub-Industry"]
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_{}_companies"
+    storage_options = {
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
+    }
     sp_stocks = pd.concat(
-        [pd.read_html(url.format(index))[0] for index in [400, 500, 600]]
+        [pd.read_html(url.format(index), storage_options=storage_options)[0] for index in [400, 500, 600]]
     )
 
     return sp_stocks[cols]
