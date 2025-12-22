@@ -14,10 +14,12 @@ dependencies = [
     "fsspec>=2024.10.0",
     "prefect>=3.1.15",
     "lxml>=6.0.2",
+    "dbt-core>=1.10.17",
+    "dbt-postgres>=1.9.1",
 ]
 
 [project.scripts]
-run-pipeline = "pipeline.main:main"
+run-pipeline = "py_pipeline.main:main"
 
 [tool.uv]
 dev-dependencies = [
@@ -30,4 +32,4 @@ dev-dependencies = [
 package = true
 
 [tool.setuptools]
-packages = ["pipeline"]
+packages = ["py_pipeline"]

@@ -3,7 +3,7 @@ import datetime as dt
 import pandas as pd
 import yfinance as yf
 
-from .config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT
+from .config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT, ENV_NAME
 
 ######### Symbols data extractors #########
 
@@ -20,6 +20,9 @@ def get_sp_stock_symbols_from_source() -> pd.DataFrame:
             for index in [400, 500, 600]
         ]
     )
+
+    if ENV_NAME == "dev":
+        sp_stocks = sp_stocks.sample(5)
 
     return sp_stocks[cols]
 

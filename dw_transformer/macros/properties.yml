@@ -1,0 +1,11 @@
+macros:
+  - name: ffill_candles
+    description: |
+      Forward fill null OHLCV values in time series data.
+
+      The macro fills missing candles with the last know closing price, and fills missing volumne with 0.
+      The table must contain the following columns: open, high, low, close, volume and the specified partition column.
+    arguments:
+      - name: partition_column
+        type: string
+        description: "Column to partition the data by (e.g., symbol)."

@@ -1,0 +1,144 @@
+sources:
+  - name: raw
+    schema: public
+    tables:
+      - name: symbols_fx
+        description: "Raw FX symbols data from source system."
+        columns:
+          - name: symbol
+            description: "The FX symbol code."
+            data_tests:
+              - not_null
+              - unique
+
+      - name: symbols_sp_stocks
+        description: "Raw S&P stocks symbols data from source system."
+        columns:
+          - name: symbol
+            description: "The S&P stock symbol code."
+            data_tests:
+              - not_null
+              - unique
+          - name: name
+            description: "The name of the S&P stock."
+          - name: sector
+            description: "The sector of the S&P stock."
+            data_tests:
+              - not_null
+          - name: industry
+            description: "The industry of the S&P stock."
+            data_tests:
+              - not_null
+
+      - name: price_history_fx
+        description: "Raw FX OHLC price history data from source system."
+        columns:
+          - name: date
+            description: "The date of the FX price data."
+            data_tests:
+              - not_null
+          - name: symbol
+            description: "The FX symbol code."
+            data_tests:
+              - not_null
+          - name: open
+            description: "The opening price of the FX symbol on the given date."
+          - name: high
+            description: "The highest price of the FX symbol on the given date."
+          - name: low
+            description: "The lowest price of the FX symbol on the given date."
+          - name: close
+            description: "The closing price of the FX symbol on the given date."
+
+      - name: price_history_sp_stocks
+        description: "Raw S&P stocks OHLC price history data from source system."
+        columns:
+          - name: date
+            description: "The date of the S&P stock price data."
+            data_tests:
+              - not_null
+          - name: symbol
+            description: "The S&P stock symbol code."
+            data_tests:
+              - not_null
+          - name: open
+            description: "The opening price of the S&P stock on the given date."
+          - name: high
+            description: "The highest price of the S&P stock on the given date."
+          - name: low
+            description: "The lowest price of the S&P stock on the given date."
+          - name: close
+            description: "The closing price of the S&P stock on the given date."
+
+models:
+  - name: dim_symbols
+    description: "Staging area for cleaned symbols data."
+    columns:
+      - name: symbol
+        description: "The symbol code."
+        data_tests:
+          - not_null
+          - unique
+      - name: name
+        description: "The name of the stock (if applicable)."
+      - name: sector
+        description: "The sector of the stock (if applicable)."
+      - name: industry
+        description: "The industry of the stock (if applicable)."
+      - name: asset_type
+        description: "The type of asset (e.g., FX, S&P Stock)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['FX', 'Stock']
+  - name: fct_prices
+    description: "Fact table for daily OHLCV price data."
+    columns:
+      - name: date
+        description: "The date of the price data."
+        data_tests:
+          - not_null
+      - name: symbol_key
+        description: "Surrogate key for the symbol."
+        data_tests:
+          - not_null
+      - name: open
+        description: "The opening price."
+      - name: high
+        description: "The highest price."
+      - name: low
+        description: "The lowest price."
+      - name: close
+        description: "The closing price."
+      - name: volume
+        description: "The trading volume."
+
+unit_tests:
+  - name: forward_fill_nulls_fx_prices
+    description: "Ensure null values in consecutive days are forward filled correctly."
+    model: stg_fx_prices
+    given:
+      - input: 'source("raw", "price_history_fx")'
+        rows:
+          - {date: '2025-01-01', symbol: 'P1', open: 1.10, high: 1.12, low: 1.09, close: 1.11, volume: 1000}
+          - {date: '2025-01-02', symbol: 'P1', open: null, high: null, low: null, close: null, volume: null}
+          - {date: '2025-01-01', symbol: 'P2', open: 1.20, high: 1.22, low: 1.19, close: 1.21, volume: 1000}
+          - {date: '2025-01-02', symbol: 'P2', open: null, high: null, low: null, close: null, volume: null}
+    expect:
+      format: sql
+      fixture: stg_fx_prices_expected
+
+  - name: forward_fill_nulls_stock_prices
+    description: "Ensure null values in consecutive days are forward filled correctly."
+    model: stg_stock_prices
+    given:
+      - input: 'source("raw", "price_history_sp_stocks")'
+        rows:
+          - {date: '2025-01-01', symbol: 'S1', open: 100.00, high: 102.05, low: 99.98, close: 100.01, volume: 1000}
+          - {date: '2025-01-02', symbol: 'S1', open: null, high: null, low: null, close: null, volume: null}
+          - {date: '2025-01-01', symbol: 'S2', open: 180.15, high: 189.25, low: 178.95, close: 179.80, volume: 1000}
+          - {date: '2025-01-02', symbol: 'S2', open: null, high: null, low: null, close: null, volume: null}
+    expect:
+      format: sql
+      fixture: stg_stock_prices_expected

@@ -1,0 +1,21 @@
+[0m02:02:14.668721 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x703b8bacf230>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x703b8c6446b0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x703b8d3deb10>]}
+
+
+============================== 02:02:14.673673 | 73e8065e-8351-4e55-b8d1-89891ab77963 ==============================
+[0m02:02:14.673673 [info ] [MainThread]: Running with dbt=1.10.17
+[0m02:02:14.674404 [debug] [MainThread]: running dbt with arguments {'profiles_dir': '/home/tiloye/.dbt', 'printer_width': '80', 'debug': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'introspect': 'True', 'invocation_command': 'dbt debug', 'send_anonymous_usage_stats': 'True', 'partial_parse': 'True', 'warn_error': 'None', 'indirect_selection': 'eager', 'cache_selected_only': 'False', 'use_colors': 'True', 'quiet': 'False', 'no_print': 'None', 'fail_fast': 'False', 'target_path': 'None', 'empty': 'None', 'log_format': 'default', 'static_parser': 'True', 'use_experimental_parser': 'False', 'write_json': 'True', 'log_path': 'logs', 'log_cache_events': 'False', 'version_check': 'True'}
+[0m02:02:14.692082 [info ] [MainThread]: dbt version: 1.10.17
+[0m02:02:14.693492 [info ] [MainThread]: python version: 3.12.3
+[0m02:02:14.694346 [info ] [MainThread]: python path: /home/tiloye/projects/securities-data-pipeline/.venv/bin/python3
+[0m02:02:14.695202 [info ] [MainThread]: os info: Linux-6.14.0-37-generic-x86_64-with-glibc2.39
+[0m02:02:14.760571 [info ] [MainThread]: Using profiles dir at /home/tiloye/.dbt
+[0m02:02:14.761110 [info ] [MainThread]: Using profiles.yml file at /home/tiloye/.dbt/profiles.yml
+[0m02:02:14.761545 [info ] [MainThread]: Using dbt_project.yml file at /home/tiloye/projects/securities-data-pipeline/py_pipeline/dbt_project.yml
+[0m02:02:14.762125 [error] [MainThread]: Encountered an error:
+Internal Error
+  Profile should not be None if loading profile completed
+[0m02:02:14.763302 [debug] [MainThread]: Resource report: {"command_name": "debug", "command_success": false, "command_wall_clock_time": 0.1722303, "process_in_blocks": "25792", "process_kernel_time": 0.18957, "process_mem_max_rss": "111420", "process_out_blocks": "8", "process_user_time": 1.720031}
+[0m02:02:14.763865 [debug] [MainThread]: Command `dbt debug` failed at 02:02:14.763741 after 0.17 seconds
+[0m02:02:14.764299 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x703b8bc100b0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x703b8ce36c60>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x703b8ab666c0>]}
+[0m02:02:14.764763 [debug] [MainThread]: Flushing usage events
+[0m02:02:15.962553 [debug] [MainThread]: An error was encountered while trying to flush usage events
