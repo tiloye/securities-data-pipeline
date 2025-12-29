@@ -12,10 +12,10 @@ from py_pipeline.config import (
     S3_ENDPOINT,
 )
 
-# @pytest.fixture(autouse=True, scope="session")
-# def prefect_test_fixture():
-#     with prefect_test_harness():
-#         yield
+@pytest.fixture(autouse=True, scope="session")
+def prefect_test_fixture():
+    with prefect_test_harness():
+        yield
 
 engine = create_engine(DATABASE_URL)
 client = Minio(

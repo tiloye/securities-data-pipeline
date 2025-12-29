@@ -5,6 +5,9 @@ import ast
 import datetime as dt
 
 import pandas as pd
+from prefect import flow
+from prefect_dbt import PrefectDbtRunner, PrefectDbtSettings
+
 from py_pipeline.extract import (
     YF_ERRORS,
     get_fx_symbols_from_source,
@@ -39,6 +42,7 @@ def etl_sp_stocks_symbols_to_s3() -> None:
     print(f"Successfully loaded symbols data for {len(stock_symbols_df)} stocks.")
 
 
+@flow
 def etl_symbols_to_s3(asset_category: str) -> None:
     if asset_category == "fx":
         etl_fx_symbols_to_s3()
@@ -46,6 +50,7 @@ def etl_symbols_to_s3(asset_category: str) -> None:
         etl_sp_stocks_symbols_to_s3()
 
 
+@flow
 def el_symbols_to_dw(asset_category: str) -> None:
     symbols_df = get_symbols_from_s3(asset_category, symbols_only=False)
     load_to_dw(symbols_df, "symbols", asset_category)
@@ -87,6 +92,7 @@ def etl_bars_in_chunk(
         raise ValueError("Could not transform empty dataframes")
 
 
+@flow
 def etl_bars_to_s3(
     asset_category: str,
     symbols: list[str],
@@ -111,6 +117,7 @@ def etl_bars_to_s3(
     )
 
 
+@flow
 def el_bars_to_dw(
     asset_category: str,
     start: str | dt.date | None = None,
@@ -130,7 +137,7 @@ def el_bars_to_dw(
 
 def get_start_end_dates(
     start_date: str | dt.date | None = None, end_date: str | dt.date | None = None
-) -> tuple[dt.date, dt.date]:
+) -> tuple[dt.date | None, dt.date | None]:
     if start_date or end_date:
         if isinstance(start_date, str):
             start_date = dt.date.fromisoformat(start_date)
@@ -149,6 +156,7 @@ def get_start_end_dates(
     return start_date, end_date
 
 
+@flow
 def etl_s3(
     asset_category: str,
     symbols: list[str] | None = None,
@@ -183,13 +191,15 @@ def etl_s3(
         )
 
 
+@flow
 def el_dw(asset_category: str):
     el_symbols_to_dw(asset_category)
     el_bars_to_dw(asset_category)
 
 
+@flow
 def main_fx(
-    symbols: list[str] | None,
+    symbols: list[str] | None = None,
     start_date: str | dt.date | None = None,
     end_date: str | dt.date | None = None,
     chunk_size: int = 500,
@@ -208,8 +218,9 @@ def main_fx(
     el_dw("fx")
 
 
+@flow
 def main_sp_stocks(
-    symbols: list[str] | None,
+    symbols: list[str] | None = None,
     start_date: str | dt.date | None = None,
     end_date: str | dt.date | None = None,
     chunk_size: int = 500,
@@ -225,6 +236,19 @@ def main_sp_stocks(
     except RuntimeError as e:
         print(f"ETL Warning: {e}")
     el_dw("sp_stocks")
+
+
+@flow
+def dbt_runner() -> None:
+    from pathlib import Path
+
+    dbt_project_path = Path(__file__).parent.parent / "dw_transformer"
+    settings = PrefectDbtSettings(project_dir=dbt_project_path)
+
+    runner = PrefectDbtRunner(settings=settings)
+    runner.invoke(["deps"])
+    runner.invoke(["run"])
+    runner.invoke(["test"])
 
 
 def main() -> None:
@@ -277,4 +301,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    start_date = "2025-01-01"
+    end_date = "2025-01-31"
+
+    main_fx(start_date=start_date, end_date=end_date)
+    main_sp_stocks(start_date=start_date, end_date=end_date)
+    dbt_runner()

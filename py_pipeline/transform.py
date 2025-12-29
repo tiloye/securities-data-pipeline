@@ -1,8 +1,10 @@
 import pandas as pd
+from prefect import task
 
 ######## Symbol data transformers ########
 
 
+@task
 def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy().reset_index(drop=True)
     df.columns = df.columns.str.lower()
@@ -27,6 +29,7 @@ def transform_fx_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
 ######### Price data transformers #########
 
 
+@task
 def transform_price_df(df: pd.DataFrame, asset_category: str) -> pd.DataFrame:
     if df.empty:
         return df

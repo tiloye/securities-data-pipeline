@@ -2,12 +2,14 @@ import datetime as dt
 
 import pandas as pd
 import yfinance as yf
+from prefect import task
 
 from .config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT, ENV_NAME
 
 ######### Symbols data extractors #########
 
 
+@task
 def get_sp_stock_symbols_from_source() -> pd.DataFrame:
     cols = ["Symbol", "Security", "GICS Sector", "GICS Sub-Industry"]
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_{}_companies"
@@ -27,6 +29,7 @@ def get_sp_stock_symbols_from_source() -> pd.DataFrame:
     return sp_stocks[cols]
 
 
+@task
 def get_fx_symbols_from_source() -> pd.DataFrame:
     fx_symbols = [
         "EURUSD=X",
@@ -40,6 +43,7 @@ def get_fx_symbols_from_source() -> pd.DataFrame:
     return pd.Series(fx_symbols, name="Symbol").to_frame()
 
 
+@task
 def get_symbols_from_s3(
     asset_category: str, symbols_only: bool = True
 ) -> list[str] | pd.DataFrame:
@@ -65,6 +69,7 @@ def get_symbols_from_s3(
 YF_ERRORS = {"fx": [], "sp_stocks": []}
 
 
+@task
 def get_prices_from_source(
     symbols: list[str],
     start: str | dt.date | None = None,
@@ -81,7 +86,7 @@ def log_failed_dowloads(asset_category: str) -> None:
     if symbols_with_errors:
         YF_ERRORS[asset_category].extend(list(symbols_with_errors.keys()))
 
-
+@task
 def get_prices_from_s3(
     asset_category: str,
     start: pd.Timestamp | None = None,
