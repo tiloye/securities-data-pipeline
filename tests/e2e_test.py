@@ -61,7 +61,7 @@ def test_s3_etl_fx_symbols():
 def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
     monkeypatch.setattr(
-        "pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
+        "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
 
     etl_sp_stocks_symbols_to_s3()
@@ -109,7 +109,7 @@ def test_dw_el_fx_symbols():
 def test_dw_el_sp_stocks_symbols(monkeypatch):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
     monkeypatch.setattr(
-        "pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
+        "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     etl_sp_stocks_symbols_to_s3()
 
@@ -158,11 +158,10 @@ class TestETLBars:
         symbols = FX_SYMBOLS if asset_category == "fx" else SP_SYMBOLS
 
         monkeypatch.setattr(
-            "pipeline.extract.yf.download",
+            "py_pipeline.extract.yf.download",
             lambda *args, **kwargs: price_data(asset_category, start=start, end=end),
         )
         if asset_category == "sp_stocks":
-            monkeypatch.setitem
             monkeypatch.setitem(
                 YF_ERRORS, "sp_stocks", ["INVALID_SYMBOL_1", "INVALID_SYMBOL_2"]
             )
@@ -276,7 +275,7 @@ def test_s3_etl_bars_in_chunk(
     monkeypatch, price_data, asset_category, remove_s3_objects
 ):
     monkeypatch.setattr(
-        "pipeline.extract.yf.download",
+        "py_pipeline.extract.yf.download",
         lambda *args, **kwargs: price_data(asset_category, args[0]),
     )
     if asset_category == "sp_stocks":
@@ -315,7 +314,7 @@ def test_s3_etl_bars_raises_exception(monkeypatch, asset_category):
     """
 
     monkeypatch.setattr(
-        "pipeline.extract.yf.download", lambda *args, **kwargs: pd.DataFrame()
+        "py_pipeline.extract.yf.download", lambda *args, **kwargs: pd.DataFrame()
     )
 
     with pytest.raises(ValueError):
@@ -336,7 +335,7 @@ def test_s3_etl_bars_in_chunk_raises_exception(monkeypatch, asset_category):
         "INVALID_SYMBOL_4",
     ]
     monkeypatch.setattr(
-        "pipeline.extract.yf.download", lambda *args, **kwargs: pd.DataFrame()
+        "py_pipeline.extract.yf.download", lambda *args, **kwargs: pd.DataFrame()
     )
     monkeypatch.setitem(YF_ERRORS, asset_category, symbols)
 
