@@ -1,6 +1,6 @@
 import duckdb
+import pandas as pd
 from fsspec import filesystem
-from pandas import DataFrame
 from prefect import task
 from sqlalchemy.engine import create_engine
 
@@ -15,7 +15,7 @@ duckdb.register_filesystem(filesystem("s3", **s3_storage_options))
 
 
 @task
-def load_to_s3(df: DataFrame, dataset: str, asset_category: str) -> None:
+def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     """Load price or symbols data into an S3 bucket."""
 
     path = f"{DATA_PATH}/{dataset}/{asset_category}"
@@ -34,13 +34,23 @@ def load_to_s3(df: DataFrame, dataset: str, asset_category: str) -> None:
 
 
 @task
-def load_to_dw(df: DataFrame, dataset: str, asset_category: str) -> None:
+def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     engine = create_engine(DATABASE_URL)
     table_name = f"{dataset}_{asset_category}"
 
     if dataset == "symbols":
         df.to_sql(table_name, index=False, con=engine, if_exists="replace")
     elif dataset == "price_history":
-        df.to_sql(table_name, index=False, con=engine, if_exists="append")
+        try:
+            existing_date_symbols_df = pd.read_sql(
+                f"SELECT date, symbol FROM {table_name}", con=engine
+            )
+            mask = ~df.set_index(["date", "symbol"]).index.isin(
+                existing_date_symbols_df.set_index(["date", "symbol"]).index
+            )
+            df = df[mask]
+            df.to_sql(table_name, index=False, con=engine, if_exists="append")
+        except Exception:
+            df.to_sql(table_name, index=False, con=engine, if_exists="append")
     else:
         raise ValueError(f"Unknown dataset, {dataset}")

@@ -125,11 +125,12 @@ def test_update_price_on_dw(asset_category, drop_dw_tables):
     )
     load_to_dw(hist_price_df, "price_history", asset_category)
 
-    # Load price update
+    # Load price update with existing records
     price_update = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"{asset_category}_price_data_update.csv")
     )
-    load_to_dw(price_update, "price_history", asset_category)
+    price_update_with_existing = pd.concat([hist_price_df, price_update], ignore_index=True)
+    load_to_dw(price_update_with_existing, "price_history", asset_category)
 
     # Verify merged data
     expected_df = (
