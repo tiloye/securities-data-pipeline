@@ -129,7 +129,7 @@ def el_bars_to_dw(
     prices_df = get_prices_from_s3(asset_category, start, end)
     load_to_dw(prices_df, "price_history", asset_category)
 
-    print("Successfully loaded FX price history data to the database.")
+    print(f"Successfully loaded {asset_category} price history data to the database.")
 
 
 ############### Combined ETL ##############
@@ -197,7 +197,7 @@ def el_dw(asset_category: str):
     el_bars_to_dw(asset_category)
 
 
-@flow
+@flow(log_prints=True)
 def main_fx(
     symbols: list[str] | None = None,
     start_date: str | dt.date | None = None,
@@ -218,7 +218,7 @@ def main_fx(
     el_dw("fx")
 
 
-@flow
+@flow(log_prints=True)
 def main_sp_stocks(
     symbols: list[str] | None = None,
     start_date: str | dt.date | None = None,
