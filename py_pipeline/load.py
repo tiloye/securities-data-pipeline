@@ -4,7 +4,7 @@ from fsspec import filesystem
 from prefect import task
 from sqlalchemy.engine import create_engine
 
-from .config import DATA_PATH, AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_ENDPOINT, DATABASE_URL
+from py_pipeline.config import DATA_PATH, AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_ENDPOINT, DATABASE_URL
 
 s3_storage_options = {
     "key": AWS_ACCESS_KEY,
