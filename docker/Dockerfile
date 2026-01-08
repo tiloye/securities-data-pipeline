@@ -10,13 +10,13 @@ ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=/uv.lock,target=/uv.lock \
+    --mount=type=bind,source=/pyproject.toml,target=/pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-ADD . /app
+COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
@@ -26,10 +26,12 @@ ARG AWS_ACCESS_KEY
 ARG AWS_SECRET_KEY
 ARG S3_ENDPOINT
 ARG BUCKET_NAME
+ARG DATABASE_URL
 ARG PREFECT_API_URL
 
 ENV AWS_ACCESS_KEY=$AWS_ACCESS_KEY
 ENV AWS_SECRET_KEY=$AWS_SECRET_KEY
 ENV S3_ENDPOINT=$S3_ENDPOINT
 ENV BUCKET_NAME=$BUCKET_NAME
+ENV DATABASE_URL=$DATABASE_URL
 ENV PREFECT_API_URL=$PREFECT_API_URL
