@@ -1,0 +1,12 @@
+sec_dw_transformer:
+  outputs:
+    dev:
+      type: postgres
+      dbname: securities_db
+      user: "{{ env_var('DB_USER') }}"
+      pass: "{{ env_var('DB_PASSWORD') }}"
+      host: "{{ env_var('DB_HOST') }}"
+      port: "{{ env_var('DB_PORT') | int}}"
+      schema: public
+      threads: 1
+  target: dev
