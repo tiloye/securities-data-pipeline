@@ -18,7 +18,7 @@ with base_ as (
         when symbol = 'USDJPY' then round(cast(close as decimal), 3)
         else round(cast(close as decimal), 5)
     end as close,
-    volume
+    cast(volume as bigint) as volume
 from {{ source("raw", "price_history_fx") }}
 ),
  ffill as (

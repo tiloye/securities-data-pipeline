@@ -6,7 +6,7 @@ with base_ as (
         round(cast(high as decimal), 2) as high,
         round(cast(low as decimal), 2) as low,
         round(cast(close as decimal), 2) as close,
-        volume
+        cast(volume as bigint) as volume
     from {{ source("raw", "price_history_sp_stocks") }}
 ),
  ffilled as (

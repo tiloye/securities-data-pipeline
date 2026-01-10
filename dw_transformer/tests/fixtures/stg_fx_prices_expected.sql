@@ -6,7 +6,7 @@
     round(cast(1.12 as decimal), 5) as high,
     round(cast(1.09 as decimal), 5) as low,
     round(cast(1.11 as decimal), 5) as close,
-    1000 as volume
+    cast(1000 as bigint) as volume
 ) union all
 (
     select
@@ -26,7 +26,7 @@
     round(cast(1.22 as decimal), 5),
     round(cast(1.19 as decimal), 5),
     round(cast(1.21 as decimal), 5),
-    1000
+    cast(1000 as bigint)
 ) union all
 (
     select
