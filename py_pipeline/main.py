@@ -243,7 +243,9 @@ def dbt_runner() -> None:
     from pathlib import Path
 
     dbt_project_path = Path(__file__).parent.parent / "dw_transformer"
-    settings = PrefectDbtSettings(project_dir=dbt_project_path)
+    settings = PrefectDbtSettings(
+        project_dir=dbt_project_path, profiles_dir=dbt_project_path
+    )
 
     runner = PrefectDbtRunner(settings=settings)
     runner.invoke(["deps"])
