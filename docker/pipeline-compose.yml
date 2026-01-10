@@ -10,5 +10,9 @@ services:
         - AWS_SECRET_KEY=${AWS_SECRET_KEY}
         - S3_ENDPOINT=${S3_ENDPOINT}
         - BUCKET_NAME=${BUCKET_NAME}
+        - DB_HOST=${DB_HOST}
+        - DB_PORT=${DB_PORT}
+        - DB_USER=${DB_USER}
+        - DB_PASSWORD=${DB_PASSWORD}
         - DATABASE_URL=${DATABASE_URL}
         - PREFECT_API_URL=${PREFECT_API_URL}
