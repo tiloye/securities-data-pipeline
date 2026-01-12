@@ -1,5 +1,5 @@
 # Securities Data Pipeline
-![pipeline](pipeline.png)
+![pipeline](./images/pipeline_architecture.png)
 
 # Overview
 A data pipeline is a series of steps that automate the extraction, transformation, and loading (ETL) of data from various sources into a data warehouse or data lake. This process is crucial for organizations that rely heavily on data-driven decision making. In investment management and algorithmic trading, a data pipeline is essential for:
@@ -7,76 +7,84 @@ A data pipeline is a series of steps that automate the extraction, transformatio
 * Building and optimizing investment portfolios based on historical data and risk models.
 * Developing and backtesting trading algorithms using historical market data.
 
-In this project, I built a data pipeline to extract and store currency and stock price data in a data lake. The pipeline gathers and stores data for major forex currency pairs and stocks tracked by the SP500, SP400, and SP600 indices.
+In this project, I built a data pipeline to extract, transform, and load forex and stock price data into a data lake and data warehouse.
 
-There are two folders in the datalake: symbols and price history. The symbols folder contains data about the ticker symbols for each stock while the price history folder contains the daily open, high, low, close, and volume data from January 1, 2000 up to the last time the pipeline ran.
+The pipeline gathers and stores data for major forex currency pairs and stocks tracked by the SP500, SP400, and SP600 indices. The data is first loaded into a s3 bucket, which serves as the data's raw landing zone, before being loaded into Postgres for dimensional modelling with dbt.
 
 # Tools Used
-* yfinance: for extracting stocks and fx price data from Yahoo Finance.
-* DuckDB: for extracting and loading data into an S3 bucket.
-* MinIO: for storing extracted and transformed data in a local S3 bucket.
-* Prefect: for workflow orchestration, monitoring, and scheduling.
-* Docker: for containerzing the project for local and cloud deployment.
+* **yfinance**: for extracting stocks and fx price data from Yahoo Finance.
+* **DuckDB**: for extracting and loading data into an S3 bucket.
+* **MinIO**: for storing extracted and transformed data in a local S3 bucket.
+* **Postgres**: for storing the data in a local data warehouse.
+* **dbt**: for transforming and modelling the data in the data warehouse
+* **Prefect**: for workflow orchestration, monitoring, and scheduling.
+* **Docker**: for containerzing the project for local and cloud deployment.
 
 # Setting up and running the pipeline locally 
 Ensure you have Docker installed on your system. The following steps were tested on Ubuntu 22.04.
 
-1. [Install](https://min.io/docs/minio/container/index.html) MinIO via Docker or directly, depending on your operating system.
-2. Start Prefect server in a Docker container:
+1. Clone the repository and switch to the project directory:
+    ```bash
+    git clone https://github.com/tiloye/securities-data-pipeline.git
+    cd securities-data-pipeline
     ```
-    docker run -d \
-    -v ./data:/root/.prefect \
-    -e PREFECT_API_URL=http://localhost:4200/api \
-    --network=host \
-    --restart=always \
-    --name=prefect_server \
-    prefecthq/prefect:3.2.13-python3.12 \
-    prefect server start
-    ```
-3. Create a Docker work pool in Prefect UI or run:
-    ```
-    docker exec prefect_server prefect work-pool create --type docker docker-pool
-    ```
-4. Start a worker that polls the docker work pool for scheduled runs in a new container:
-    ```
-    docker run -d \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -e PREFECT_API_URL="http://localhost:4200/api" \
-    --network=host \
-    --name=prefect_docker_worker \
-    --restart=always prefecthq/prefect:3.2.13-python3.12 \
-    prefect worker start \
-    --name docker-worker \
-    --pool docker-pool \
-    --type docker \
-    --install-policy if-not-present
+2. Setup Minio, Postgres, and Prefect Server:
+    ```bash
+    docker compose -f=./docker/op-compose.yml up -d
     ```
 
-5. Clone the repository:
+3. Create database, `securities_db` in postgres:
+    ```bash
+    docker exec [YOUR POSTGRES CONTAINER ID] psql -c "CREATE DATABASE securities_db" --username=postgres
     ```
-    git clone https://github.com/tiloye/securities-data-pipeline.git
-    ```
+
 4. Create ".env" file with the following values in the project directory:
     ```
-    AWS_ACCESS_KEY=your_aws/minio_access_key
-    AWS_SECRET_KEY=your_aws/minio_secret_key
-    S3_ENDPOINT=your_aws/minio_s3_endpoint_url
-    BUCKET_NAME=your-bucket-name
-    
-    PREFECT_API_URL=your_prefect_api_url
+    ENV_NAME=prod
+
+    AWS_ACCESS_KEY=minioadmin
+    AWS_SECRET_KEY=minioadmin
+    S3_ENDPOINT=http://127.0.0.1:9002
+    BUCKET_NAME=securities-data-lake
+
+    DB_HOST=127.0.0.1
+    DB_PORT=5433
+    DB_USER=postgres
+    DB_PASSWORD=postgres
+    DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/securities_db
+
+    PREFECT_API_URL=http://127.0.0.1:4201/api
     ```
 5. Create docker image for the pipeline:
     ```
-    docker compose build
+    docker compose -f ./docker/pipeline-compose.yml --env-file=.env build
     ```
 6. Deploy the pipeline as a Prefect flow:
    ```
-   python -m main.deploy
+   docker run --rm -it --network=host securities-data-pipeline:latest python -m py_pipeline.deploy
    ```
 
-Your Prefect UI should now have two new deployments for forex (fx-data-pipeline) and S&P stocks (sp-stocks-data-pipeline) data respectively.
+Your Prefect UI should have three deployments as shown in the image below:
 
+![pipeline](./images/pipeline_deployments.png)
+
+The deployments "fx-data-pipeline" and "sp-stocks-data-pipeline" are scheduled to run at 12am utc Tuesday through Saturday, extracting the previous day's data from the source and loading it into the data lake and data warehouse on each run. The "dbt-dw-transformer" deployment is activated when the "fx-data-pipeline" and "sp-stocks-datapipeline" run successfully, transforming the data loaded into the data warehouse.
+
+# Areas of Improvement
+
+* **Integrate Institutional-Grade Data Sources**: Transition from yahoo finance to comprehensive market data providers like Databento or Massive for high-fidelity historical and real-time stock data.
+
+* **Implement Task Caching**: Utilize Prefect’s caching mechanisms to prevent redundant API requests to source systems, ensuring that failed runs can be retried without exceeding rate limits or wasting compute.
+
+* **Automated Data Documentation**: Deploy a dbt documentation server locally (or via GitHub Pages) to provide a searchable data dictionary and visual lineage for all transformed models.
+
+* **Comprehensive Data Quality Tests**: Expand testing beyond basic data tests to include automated data profiling and drift detection using to ensure long-term data integrity.
+
+* **Cloud Deployment**: Migrate the local Docker stack to a cloud environment (AWS/GCP), swapping MinIO for S3 and moving the orchestration layer to managed services like Prefect Cloud for better scalability.
+
+* **CI/CD Pipeline Integration**: Automate the execution of the pytest and dbt test via GitHub Actions to enforce code quality and prevent breaking changes from reaching the main branch.
 
 # Resources
 * [Data Engineering Zoomcamp, Modules 1 & 2](https://github.com/dataTalksClub/data-engineering-zoomcamp/)
 * [Prefect Docs](https://docs.prefect.io/)
+* [dbt Docs](https://docs.getdbt.com/)
