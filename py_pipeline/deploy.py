@@ -7,11 +7,12 @@ from prefect.runner.storage import LocalStorage
 from py_pipeline.main import dbt_runner, main_fx, main_sp_stocks
 
 if __name__ == "__main__":
-    fx_flow_deployment = main_fx.to_deployment("fx-data-pipeline", cron="0 0 * * 1-5")
+    schedule = "0 0 * * 2-6"
+    fx_flow_deployment = main_fx.to_deployment("fx-data-pipeline", cron=schedule)
     fx_flow_deployment.storage = LocalStorage(path="/app")
 
     sp_stocks_flow_deployment = main_sp_stocks.to_deployment(
-        "sp-stocks-data-pipeline", cron="0 0 * * 1-5"
+        "sp-stocks-data-pipeline", cron=schedule
     )
     sp_stocks_flow_deployment.storage = LocalStorage(path="/app")
 
