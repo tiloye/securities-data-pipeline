@@ -5,3 +5,4 @@
 .vscode
 .git
 __pycache__py
+/data
