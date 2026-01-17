@@ -1,3 +1,5 @@
+# Compose file for on-premise deployment of Prefect Server, MinIO, Postgres, and Metabase
+
 services:
 
   minio:
@@ -14,12 +16,11 @@ services:
   postgresdb:
     image: postgres:17.6
     environment:
-      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: prefect
       PGPORT: 5433
     volumes:
       - ../data/postgres:/var/lib/postgresql/data
+      - ./pg-entrypoint-initdb.d:/docker-entrypoint-initdb.d
     network_mode: "host"
     restart: always
 
@@ -28,7 +29,7 @@ services:
     depends_on:
       - postgresdb
     environment:
-      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/prefect
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://postgres:postgres@localhost:5433/prefect # Uses default postgres user
       PREFECT_API_URL: http://localhost:4201/api
     network_mode: "host"
     restart: always
@@ -49,3 +50,17 @@ services:
       prefect worker start --name docker-worker --pool docker-pool 
       --type docker --install-policy if-not-present 
       --base-job-template /prefect_job_templates/docker-template.json
+
+  metabase:
+    image: metabase/metabase:v0.58.2.x 
+    depends_on:
+      - postgresdb
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5433
+      MB_DB_USER: postgres # Default user set by postgres image
+      MB_DB_PASS: postgres
+      MB_DB_HOST: localhost
+    network_mode: "host"
+    restart: always
