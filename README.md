@@ -18,7 +18,8 @@ The pipeline gathers and stores data for major forex currency pairs and stocks t
 * **Postgres**: for storing the data in a local data warehouse.
 * **dbt**: for transforming and modelling the data in the data warehouse
 * **Prefect**: for workflow orchestration, monitoring, and scheduling.
-* **Docker**: for containerzing the project for local and cloud deployment.
+* **Docker**: for containerizing the project for local and cloud deployment.
+* **Metabase**: for data visualization.
 
 # Setting up and running the pipeline locally 
 Ensure you have Docker installed on your system. The following steps were tested on Ubuntu 22.04.
@@ -32,13 +33,12 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```bash
     docker compose -f=./docker/op-compose.yml up -d
     ```
+    You can access the Prefect UI and Metabase UI via the URL below:
 
-3. Create database, `securities_db` in postgres:
-    ```bash
-    docker exec [YOUR POSTGRES CONTAINER ID] psql -c "CREATE DATABASE securities_db" --username=postgres
-    ```
+    * **Prefect**: localhost:4201
+    * **Metabase**: localhost:3000
 
-4. Create ".env" file with the following values in the project directory:
+3. Create ".env" file with the following values in the project directory:
     ```
     ENV_NAME=prod
 
@@ -55,11 +55,11 @@ Ensure you have Docker installed on your system. The following steps were tested
 
     PREFECT_API_URL=http://127.0.0.1:4201/api
     ```
-5. Create docker image for the pipeline:
+4. Create docker image for the pipeline:
     ```
     docker compose -f ./docker/pipeline-compose.yml --env-file=.env build
     ```
-6. Deploy the pipeline as a Prefect flow:
+5. Deploy the pipeline as a Prefect flow:
    ```
    docker run --rm -it --network=host securities-data-pipeline:latest python -m py_pipeline.deploy
    ```
@@ -69,6 +69,10 @@ Your Prefect UI should have three deployments as shown in the image below:
 ![pipeline](./images/pipeline_deployments.png)
 
 The deployments "fx-data-pipeline" and "sp-stocks-data-pipeline" are scheduled to run at 12am utc Tuesday through Saturday, extracting the previous day's data from the source and loading it into the data lake and data warehouse on each run. The "dbt-dw-transformer" deployment is activated when the "fx-data-pipeline" and "sp-stocks-datapipeline" run successfully, transforming the data loaded into the data warehouse.
+
+Once the data loaded into the data warehouse and transformed. You can build a dashoard with [metabase](metabase.com) for analyzing historical market data to identify trends, patterns, and potential investment opportunities.
+
+![metabase dashboard](./images/metabase_dashboard.png)
 
 # Areas of Improvement
 
@@ -88,3 +92,4 @@ The deployments "fx-data-pipeline" and "sp-stocks-data-pipeline" are scheduled t
 * [Data Engineering Zoomcamp, Modules 1 & 2](https://github.com/dataTalksClub/data-engineering-zoomcamp/)
 * [Prefect Docs](https://docs.prefect.io/)
 * [dbt Docs](https://docs.getdbt.com/)
+* [Metabase Docs](http://metabase.com/docs)
