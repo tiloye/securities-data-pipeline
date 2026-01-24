@@ -31,7 +31,7 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
 2. Setup Minio, Postgres, and Prefect Server:
     ```bash
-    docker compose -f=./docker/op-compose.yml up -d
+    docker compose -f=./docker/prod/compose.yml up -d
     ```
     You can access the Prefect UI and Metabase UI via the URL below:
 
@@ -40,8 +40,6 @@ Ensure you have Docker installed on your system. The following steps were tested
 
 3. Create ".env" file with the following values in the project directory:
     ```
-    ENV_NAME=prod
-
     AWS_ACCESS_KEY=minioadmin
     AWS_SECRET_KEY=minioadmin
     S3_ENDPOINT=http://127.0.0.1:9002
@@ -57,7 +55,7 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
 4. Create docker image for the pipeline:
     ```
-    docker compose -f ./docker/pipeline-compose.yml --env-file=.env build
+    docker compose -f ./docker/pipeline-compose.yml --env-file=.env.prod build
     ```
 5. Deploy the pipeline as a Prefect flow:
    ```

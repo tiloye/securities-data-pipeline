@@ -3,10 +3,9 @@ services:
   pipeline:
     image: securities-data-pipeline:latest
     build:
-      context: ..
-      dockerfile: docker/Dockerfile
+      context: ../../
+      dockerfile: docker/pipeline/Dockerfile
       args:
-        - ENV_NAME=${ENV_NAME}
         - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
         - AWS_SECRET_KEY=${AWS_SECRET_KEY}
         - S3_ENDPOINT=${S3_ENDPOINT}
