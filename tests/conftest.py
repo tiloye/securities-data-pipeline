@@ -2,13 +2,12 @@ import pytest
 from minio import Minio
 from prefect.testing.utilities import prefect_test_harness
 from sqlalchemy import text
-from sqlalchemy.engine import create_engine
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     BUCKET_NAME,
-    DATABASE_URL,
+    DB_ENGINE,
     S3_ENDPOINT,
 )
 
@@ -17,7 +16,7 @@ def prefect_test_fixture():
     with prefect_test_harness():
         yield
 
-engine = create_engine(DATABASE_URL)
+engine = DB_ENGINE
 client = Minio(
     S3_ENDPOINT.replace("http://", ""),
     access_key=AWS_ACCESS_KEY,

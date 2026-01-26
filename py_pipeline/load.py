@@ -4,7 +4,7 @@ from fsspec import filesystem
 from prefect import task
 from sqlalchemy.engine import create_engine
 
-from py_pipeline.config import DATA_PATH, AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_ENDPOINT, DATABASE_URL
+from py_pipeline.config import DATA_PATH, AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_ENDPOINT, DB_ENGINE
 
 s3_storage_options = {
     "key": AWS_ACCESS_KEY,
@@ -35,7 +35,7 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
 
 @task
 def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
-    engine = create_engine(DATABASE_URL)
+    engine = DB_ENGINE
     table_name = f"{dataset}_{asset_category}"
 
     if dataset == "symbols":

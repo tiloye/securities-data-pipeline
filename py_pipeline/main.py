@@ -3,9 +3,10 @@ from __future__ import annotations
 import argparse
 import ast
 import datetime as dt
+from pathlib import Path
 
 import pandas as pd
-from prefect import flow
+from prefect import flow, task
 from prefect_dbt import PrefectDbtRunner, PrefectDbtSettings
 
 from py_pipeline.extract import (
@@ -238,11 +239,34 @@ def main_sp_stocks(
     el_dw("sp_stocks")
 
 
+@task(log_prints=True)
+def create_dbt_profiles(project_dir: Path) -> None:
+    from py_pipeline.config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+
+    profiles_content = f"""sec_dw_transformer:
+  outputs:
+    dev:
+      type: postgres
+      dbname: {DB_NAME}
+      user: {DB_USER}
+      pass: {DB_PASSWORD}
+      host: {DB_HOST}
+      port: {DB_PORT}
+      schema: public
+      threads: 1
+  target: dev"""
+
+    profiles_path = project_dir / "profiles.yml"
+    with open(profiles_path, "w") as f:
+        f.write(profiles_content)
+
+    print(f"Created/updated profiles.yml at {profiles_path}")
+
+
 @flow
 def dbt_runner() -> None:
-    from pathlib import Path
-
     dbt_project_path = Path(__file__).parent.parent / "dw_transformer"
+    create_dbt_profiles(dbt_project_path)
     settings = PrefectDbtSettings(
         project_dir=dbt_project_path, profiles_dir=dbt_project_path
     )
@@ -306,6 +330,6 @@ if __name__ == "__main__":
     start_date = "2025-01-01"
     end_date = "2025-01-31"
 
-    main_fx(start_date=start_date, end_date=end_date)
-    main_sp_stocks(start_date=start_date, end_date=end_date)
+    # main_fx(start_date=start_date, end_date=end_date)
+    # main_sp_stocks(start_date=start_date, end_date=end_date)
     dbt_runner()

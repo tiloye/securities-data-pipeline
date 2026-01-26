@@ -11,7 +11,7 @@ from py_pipeline.config import (
     BUCKET_NAME,
     DATA_PATH,
     S3_ENDPOINT,
-    DATABASE_URL,
+    DB_ENGINE,
 )
 from py_pipeline.extract import YF_ERRORS
 from py_pipeline.main import (
@@ -26,7 +26,7 @@ FX_SYMBOLS = ["EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "JPY=X", "CHF=X", 
 SP_SYMBOLS = ["AAPL", "INVALID_SYMBOL_1", "MSFT", "BRK-A", "BRK-B", "INVALID_SYMBOL_2"]
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
-engine = create_engine(DATABASE_URL)
+engine = DB_ENGINE
 
 s3_storage_options = {
     "key": AWS_ACCESS_KEY,
@@ -38,7 +38,7 @@ s3_storage_options = {
 ########## Tests for Symbols ETL ##############
 
 
-def test_s3_etl_fx_symbols():
+def test_s3_etl_fx_symbols(remove_s3_objects):
     expected_data = (
         pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_symbols.csv"))
         .sort_values("symbol")
