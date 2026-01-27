@@ -38,26 +38,39 @@ Ensure you have Docker installed on your system. The following steps were tested
     * **Prefect**: localhost:4201
     * **Metabase**: localhost:3000
 
-3. Create ".env" file with the following values in the project directory:
+3. Create ".env.prod" file with the following values in the project directory:
     ```
-    AWS_ACCESS_KEY=minioadmin
-    AWS_SECRET_KEY=minioadmin
+    ENV_NAME=prod
+
     S3_ENDPOINT=http://127.0.0.1:9002
     BUCKET_NAME=securities-data-lake
 
-    DB_HOST=127.0.0.1
-    DB_PORT=5433
-    DB_USER=postgres
-    DB_PASSWORD=postgres
-    DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/securities_db
-
     PREFECT_API_URL=http://127.0.0.1:4201/api
     ```
-4. Create docker image for the pipeline:
+4. Create an AwsCredentials and SQLAlchemyConnector block with the following values, using the prefect UI (localhost:4201):
+
+    * **AwsCredentials** block:
+        - Block Name: sec-datalake-credentials
+        - AWS Access Key ID: minioadmin (or your S3 access key)
+        - AWS Access Key Secret: minioadmin (or your S3 secret key)
+
+    * **SQLAlchemyConnector** block:
+        - Block Name: sec-dw-connector
+        
+        Under "Connection Info", choose "ConnectionComponents" and fill in your database credentials:
+        - Host: localhost
+        - Port: 5433
+        - Database: securities_db
+        - Username: postgres
+        - Password: postgres
+    
+    Ensure these credentials match your production (local) datalake and warehouse credentials.
+
+5. Create docker image for the pipeline:
     ```
-    docker compose -f ./docker/pipeline-compose.yml --env-file=.env.prod build
+    docker compose -f ./docker/pipeline/compose.yml --env-file=.env.prod build
     ```
-5. Deploy the pipeline as a Prefect flow:
+6. Deploy the pipeline as a Prefect flow:
    ```
    docker run --rm -it --network=host securities-data-pipeline:latest python -m py_pipeline.deploy
    ```
