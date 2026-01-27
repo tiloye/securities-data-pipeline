@@ -10,7 +10,7 @@ sources:
             data_tests:
               - not_null
               - unique
-
+              
       - name: symbols_sp_stocks
         description: "Raw S&P stocks symbols data from source system."
         columns:
@@ -74,6 +74,14 @@ models:
   - name: dim_symbols
     description: "Staging area for cleaned symbols data."
     columns:
+      - name: symbol_key
+        description: "Surrogate key for the symbols."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('fct_prices')
+                field: symbol_key
       - name: symbol
         description: "The symbol code."
         data_tests:
@@ -92,6 +100,7 @@ models:
           - accepted_values:
               arguments:
                 values: ['FX', 'Stock']
+
   - name: fct_prices
     description: "Fact table for daily OHLCV price data."
     columns:
@@ -100,9 +109,13 @@ models:
         data_tests:
           - not_null
       - name: symbol_key
-        description: "Surrogate key for the symbol."
+        description: "Surrogate key for the symbols."
         data_tests:
           - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_symbols')
+                field: symbol_key
       - name: open
         description: "The opening price."
       - name: high

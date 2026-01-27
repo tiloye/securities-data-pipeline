@@ -2,6 +2,6 @@ symbol,name,sector,industry
 A,Stock A,Sector 1,Industry 1
 B-B,Stock B,Sector 2,Industry 2
 C,Stock C,Sector 1,Industry 1
-D-A,Stock D,Sector 2,Industry 2
+D-A,Stock D,Sector 2,Missing
 E,Stock E,Sector 1,Industry 1
-F,Stock F,Sector 2,Industry 2
+F,Stock F,Missing,Industry 2

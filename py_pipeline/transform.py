@@ -17,6 +17,8 @@ def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
         inplace=True,
     )
     df["symbol"] = df["symbol"].str.replace(".", "-")
+    df["sector"].fillna("Missing", inplace=True)
+    df["industry"].fillna("Missing", inplace=True)
     return df[["symbol", "name", "sector", "industry"]]
 
 
