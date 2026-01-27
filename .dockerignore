@@ -7,3 +7,7 @@
 .git
 __pycache__py
 /data
+/images
+/docker
+/tests
+/dw_transformer/profiles.yml
