@@ -170,9 +170,7 @@ def etl_s3(
             f"'asset_category should be one of 'fx' or 'sp_stocks', got {asset_category}"
         )
 
-    try:
-        symbols = symbols if symbols else get_symbols_from_s3(asset_category)
-    except Exception:
+    if not symbols:
         etl_symbols_to_s3(asset_category)
         symbols = get_symbols_from_s3(asset_category)
 

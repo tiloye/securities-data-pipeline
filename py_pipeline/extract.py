@@ -4,26 +4,30 @@ import pandas as pd
 import yfinance as yf
 from prefect import task
 
-from .config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT
+from py_pipeline.config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT
 
 ######### Symbols data extractors #########
 
 
 @task
 def get_sp_stock_symbols_from_source() -> pd.DataFrame:
-    cols = ["Symbol", "Security", "GICS Sector", "GICS Sub-Industry"]
     url = "https://en.wikipedia.org/wiki/List_of_S%26P_{}_companies"
     storage_options = {
         "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
     }
-    sp_stocks = pd.concat(
-        [
-            pd.read_html(url.format(index), storage_options=storage_options)[0]
-            for index in [400, 500, 600]
-        ]
-    )
 
-    return sp_stocks[cols]
+    sp_400 = pd.read_html(url.format(400), storage_options=storage_options)[0].assign(
+        in_sp400=True
+    )
+    sp_500 = pd.read_html(url.format(500), storage_options=storage_options)[0].assign(
+        in_sp500=True
+    )
+    sp_600 = pd.read_html(url.format(600), storage_options=storage_options)[0].assign(
+        in_sp600=True
+    )
+    sp_stocks = pd.concat([sp_400, sp_500, sp_600])
+
+    return sp_stocks
 
 
 @task
@@ -53,12 +57,16 @@ def get_symbols_from_s3(
     }
 
     path = f"{DATA_PATH}/symbols/{asset_category}"
-    symbols = pd.read_csv(f"{path}.csv", storage_options=s3_storage_options)
 
     if symbols_only:
-        symbols = symbols["symbol"].to_list()
+        symbols = pd.read_parquet(
+            f"{path}.parquet", columns=["symbol"], storage_options=s3_storage_options
+        )
+        symbols = symbols["symbol"].unique().tolist()
         return symbols
-    return symbols
+    else:
+        symbols = pd.read_parquet(f"{path}.parquet", storage_options=s3_storage_options)
+        return symbols
 
 
 ######### Price data extractors #########
@@ -82,6 +90,7 @@ def log_failed_dowloads(asset_category: str) -> None:
     symbols_with_errors = yf.shared._ERRORS
     if symbols_with_errors:
         YF_ERRORS[asset_category].extend(list(symbols_with_errors.keys()))
+
 
 @task
 def get_prices_from_s3(

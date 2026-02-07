@@ -44,10 +44,10 @@ def s3_data():
     stock_symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
     )
-    fx_symbol_path = f"{DATA_PATH}/symbols/fx.csv"
-    stock_symbol_path = f"{DATA_PATH}/symbols/sp_stocks.csv"
-    fx_symbols.to_csv(fx_symbol_path, index=False, storage_options=s3_storage_options)
-    stock_symbols.to_csv(
+    fx_symbol_path = f"{DATA_PATH}/symbols/fx.parquet"
+    stock_symbol_path = f"{DATA_PATH}/symbols/sp_stocks.parquet"
+    fx_symbols.to_parquet(fx_symbol_path, index=False, storage_options=s3_storage_options)
+    stock_symbols.to_parquet(
         stock_symbol_path, index=False, storage_options=s3_storage_options
     )
 
