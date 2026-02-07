@@ -47,8 +47,8 @@ def test_s3_etl_fx_symbols(remove_s3_objects):
 
     etl_fx_symbols_to_s3()
     loaded_data = (
-        pd.read_csv(
-            f"{DATA_PATH}/symbols/fx.csv",
+        pd.read_parquet(
+            f"{DATA_PATH}/symbols/fx.parquet",
             storage_options=s3_storage_options,
         )
         .sort_values("symbol")
@@ -63,11 +63,14 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
     monkeypatch.setattr(
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
+    monkeypatch.setattr(
+        "py_pipeline.transform.date_stamp", lambda: "2026-01-01"
+    )
 
     etl_sp_stocks_symbols_to_s3()
     loaded_data = (
-        pd.read_csv(
-            f"{DATA_PATH}/symbols/sp_stocks.csv",
+        pd.read_parquet(
+            f"{DATA_PATH}/symbols/sp_stocks.parquet",
             storage_options=s3_storage_options,
         )
         .sort_values("symbol")
@@ -110,6 +113,9 @@ def test_dw_el_sp_stocks_symbols(monkeypatch):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
     monkeypatch.setattr(
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
+    )
+    monkeypatch.setattr(
+        "py_pipeline.transform.date_stamp", lambda: "2026-01-01"
     )
     etl_sp_stocks_symbols_to_s3()
 

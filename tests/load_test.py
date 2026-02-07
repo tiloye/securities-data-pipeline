@@ -25,8 +25,8 @@ def test_load_symbols_data_to_s3(asset_category, remove_s3_objects):
 
     load_to_s3(symbols, "symbols", asset_category)
 
-    loaded_symbols = pd.read_csv(
-        f"{DATA_PATH}/symbols/{asset_category}.csv",
+    loaded_symbols = pd.read_parquet(
+        f"{DATA_PATH}/symbols/{asset_category}.parquet",
         storage_options={
             "key": AWS_ACCESS_KEY,
             "secret": AWS_SECRET_KEY,

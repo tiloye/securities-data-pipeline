@@ -1,7 +1,7 @@
-symbol,name,sector,industry
-A,Stock A,Sector 1,Industry 1
-B-B,Stock B,Sector 2,Industry 2
-C,Stock C,Sector 1,Industry 1
-D-A,Stock D,Sector 2,Missing
-E,Stock E,Sector 1,Industry 1
-F,Stock F,Missing,Industry 2
+symbol,name,sector,industry,in_sp400,in_sp500,in_sp600,date_stamp
+E,Stock E,Sector 1,Industry 1,True,False,False,2026-01-01
+F,Stock F,Missing,Industry 2,False,False,True,2026-01-01
+C,Stock C,Sector 1,Industry 1,False,False,True,2026-01-01
+D-A,Stock D,Sector 2,Missing,True,False,False,2026-01-01
+A,Stock A,Sector 1,Industry 1,False,True,False,2026-01-01
+B-B,Stock B,Sector 2,Industry 2,False,True,False,2026-01-01

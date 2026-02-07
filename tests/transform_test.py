@@ -12,10 +12,11 @@ from py_pipeline.transform import (
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 
 
-def test_transform_stocks_symbol_df():
+def test_transform_stocks_symbol_df(monkeypatch):
     expected_transformed_data = pd.read_csv(
         TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
-    )
+    ).sort_values("symbol").reset_index(drop=True)
+    monkeypatch.setattr("py_pipeline.transform.date_stamp", lambda: "2026-01-01")
 
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
     transformed_data = transform_stocks_symbol_df(symbols_df)

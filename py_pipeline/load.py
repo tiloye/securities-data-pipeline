@@ -18,19 +18,22 @@ duckdb.register_filesystem(filesystem("s3", **s3_storage_options))
 def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     """Load price or symbols data into an S3 bucket."""
 
+    if dataset not in ["symbols", "price_history"]:
+        raise ValueError(f"Unknown dataset, {asset_category}")
+
     path = f"{DATA_PATH}/{dataset}/{asset_category}"
-    if dataset == "symbols":
-        df.to_csv(f"{path}.csv", index=False, storage_options=s3_storage_options)
-    elif dataset == "price_history":
-        try:
-            merged_data = duckdb.sql(
+    try:
+        if dataset == "symbols":
+            existing_data = duckdb.sql(
+            f"SELECT * FROM '{path}.parquet' UNION SELECT * FROM df ORDER BY symbol, date_stamp"
+        )
+        else:
+            existing_data = duckdb.sql(
                 f"SELECT * FROM '{path}.parquet' UNION SELECT * FROM df ORDER BY date, symbol"
             )
-            duckdb.sql(f"COPY merged_data TO '{path}.parquet' (FORMAT PARQUET)")
-        except duckdb.IOException:
-            duckdb.sql(f"COPY df TO '{path}.parquet' (FORMAT PARQUET)")
-    else:
-        raise ValueError(f"Unknown dataset, {dataset}")
+        duckdb.sql(f"COPY existing_data TO '{path}.parquet' (FORMAT PARQUET)")
+    except duckdb.IOException:
+        duckdb.sql(f"COPY df TO '{path}.parquet' (FORMAT PARQUET)")
 
 
 @task
