@@ -2,7 +2,6 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from sqlalchemy.engine import create_engine
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,

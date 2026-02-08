@@ -2,7 +2,6 @@ import duckdb
 import pandas as pd
 from fsspec import filesystem
 from prefect import task
-from sqlalchemy.engine import create_engine
 
 from py_pipeline.config import (
     DATA_PATH,
