@@ -6,6 +6,7 @@ services:
       context: ../../
       dockerfile: docker/pipeline/Dockerfile
       args:
+        - ENV_NAME=${ENV_NAME}
         - S3_ENDPOINT=${S3_ENDPOINT}
         - BUCKET_NAME=${BUCKET_NAME}
         - PREFECT_API_URL=${PREFECT_API_URL}
