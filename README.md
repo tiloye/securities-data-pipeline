@@ -33,8 +33,9 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```bash
     docker compose -f=./docker/prod/compose.yml up -d
     ```
-    You can access the Prefect UI and Metabase UI via the URL below:
+    You can access the Minio, Prefect, and Metabase UIs using the URLs below:
 
+    * **Minio**: localhost:9003
     * **Prefect**: localhost:4201
     * **Metabase**: localhost:3000
 
@@ -93,7 +94,7 @@ Once the data loaded into the data warehouse and transformed. You can build a da
 
 * **Automated Data Documentation**: Deploy a dbt documentation server locally (or via GitHub Pages) to provide a searchable data dictionary and visual lineage for all transformed models.
 
-* **Comprehensive Data Quality Tests**: Expand testing beyond basic data tests to include automated data profiling and drift detection using to ensure long-term data integrity.
+* **Comprehensive Data Quality Tests**: Expand testing beyond basic data tests to include automated data profiling and drift detection to ensure long-term data integrity.
 
 * **Cloud Deployment**: Migrate the local Docker stack to a cloud environment (AWS/GCP), swapping MinIO for S3 and moving the orchestration layer to managed services like Prefect Cloud for better scalability.
 
