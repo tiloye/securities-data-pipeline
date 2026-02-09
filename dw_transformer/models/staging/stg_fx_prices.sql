@@ -1,7 +1,7 @@
 with base_ as (
     select
     cast("date" as date) as date,
-    {{ dbt_utils.generate_surrogate_key(['symbol']) }} as symbol_key,
+    symbol,
     case
         when symbol = 'USDJPY' then round(cast(open as decimal), 3)
         else round(cast(open as decimal), 5)
@@ -24,9 +24,9 @@ from {{ source("raw", "price_history_fx") }}
  ffill as (
     select
         date,
-        symbol_key,
-        {{ ffill_candles('symbol_key') }}
-from base_
+        symbol,
+        {{ ffill_candles('symbol') }}
+    from base_
 )
 
 select *

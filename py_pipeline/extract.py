@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 from prefect import task
 
-from py_pipeline.config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT
+from py_pipeline.config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT, ENV_NAME
 
 ######### Symbols data extractors #########
 
@@ -27,6 +27,8 @@ def get_sp_stock_symbols_from_source() -> pd.DataFrame:
     )
     sp_stocks = pd.concat([sp_400, sp_500, sp_600])
 
+    if ENV_NAME == "dev":
+        sp_stocks = sp_stocks.sample(5)
     return sp_stocks
 
 

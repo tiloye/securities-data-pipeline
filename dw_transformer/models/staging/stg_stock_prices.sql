@@ -1,7 +1,7 @@
 with base_ as (
     select
         cast("date" as date) as date,
-        {{ dbt_utils.generate_surrogate_key(['symbol']) }} as symbol_key,
+        symbol,
         round(cast(open as decimal), 2) as open,
         round(cast(high as decimal), 2) as high,
         round(cast(low as decimal), 2) as low,
@@ -12,8 +12,8 @@ with base_ as (
  ffilled as (
     select
         "date",
-        symbol_key,
-        {{ ffill_candles('symbol_key') }}
+        symbol,
+        {{ ffill_candles('symbol') }}
     from base_
  )
 

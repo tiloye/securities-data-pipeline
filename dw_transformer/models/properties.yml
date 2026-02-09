@@ -74,32 +74,51 @@ models:
   - name: dim_symbols
     description: "Staging area for cleaned symbols data."
     columns:
-      - name: symbol_key
-        description: "Surrogate key for the symbols."
-        data_tests:
-          - not_null
-          - relationships:
-              arguments:
-                to: ref('fct_prices')
-                field: symbol_key
       - name: symbol
-        description: "The symbol code."
+        description: "The trading symbol."
         data_tests:
           - not_null
           - unique
+          - relationships:
+              arguments:
+                to: ref('fct_prices')
+                field: symbol
       - name: name
-        description: "The name of the stock (if applicable)."
+        description: "The full name of the symbol (if applicable)."
       - name: sector
-        description: "The sector of the stock (if applicable)."
+        description: "The sector of the symbol (if applicable)."
       - name: industry
-        description: "The industry of the stock (if applicable)."
+        description: "The industry of the symbol (if applicable)."
       - name: asset_type
-        description: "The type of asset (e.g., FX, S&P Stock)."
+        description: "The type of symbol (e.g., FX, S&P Stock)."
         data_tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['FX', 'Stock']
+      - name: in_sp400
+        description: "Indicates if the symbol is in the S&P 400 index."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: in_sp500
+        description: "Indicates if the symbol is in the S&P 500 index."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: in_sp600
+        description: "Indicates if the symbol is in the S&P 600 index."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: date_stamp
+        description: "The date when the symbol data was last updated (Null for forex symbols)."
 
   - name: fct_prices
     description: "Fact table for daily OHLCV price data."
@@ -108,14 +127,14 @@ models:
         description: "The date of the price data."
         data_tests:
           - not_null
-      - name: symbol_key
-        description: "Surrogate key for the symbols."
+      - name: symbol
+        description: "The symbol of the price data."
         data_tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_symbols')
-                field: symbol_key
+                field: symbol
       - name: open
         description: "The opening price."
       - name: high

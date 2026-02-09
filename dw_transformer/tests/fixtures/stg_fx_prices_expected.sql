@@ -1,7 +1,7 @@
 (
     select
     cast('2025-01-01' as date) as date,
-    md5('P1') as symbol_key,
+    'P1' as symbol,
     round(cast(1.10 as decimal), 5) as open,
     round(cast(1.12 as decimal), 5) as high,
     round(cast(1.09 as decimal), 5) as low,
@@ -11,7 +11,7 @@
 (
     select
     cast('2025-01-02' as date),
-    md5('P1'),
+    'P1',
     round(cast(1.11 as decimal), 5),
     round(cast(1.11 as decimal), 5),
     round(cast(1.11 as decimal), 5),
@@ -21,7 +21,7 @@
 (
     select
     cast('2025-01-01' as date),
-    md5('P2'),
+    'P2',
     round(cast(1.20 as decimal), 5),
     round(cast(1.22 as decimal), 5),
     round(cast(1.19 as decimal), 5),
@@ -31,7 +31,7 @@
 (
     select
     cast('2025-01-02' as date),
-    md5('P2'),
+    'P2',
     round(cast(1.21 as decimal), 5),
     round(cast(1.21 as decimal), 5),
     round(cast(1.21 as decimal), 5),

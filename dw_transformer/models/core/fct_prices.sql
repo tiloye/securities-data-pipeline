@@ -1,8 +1,22 @@
 with prices as (
-    select *
+    select
+        "date",
+        symbol,
+        open,
+        high,
+        low,
+        close,
+        volume
     from {{ ref('stg_fx_prices') }}
     union all
-    select *
+    select
+        "date",
+        symbol,
+        open,
+        high,
+        low,
+        close,
+        volume
     from {{ ref('stg_stock_prices') }}
 )
 

@@ -324,10 +324,10 @@ def main() -> None:
         main_sp_stocks(symbols, start_date, end_date, chunk_size)
 
 
-if __name__ == "__main__":
-    start_date = "2025-01-01"
-    end_date = "2025-01-31"
+# if __name__ == "__main__":
+#     start_date = "2025-01-01"
+#     end_date = "2025-01-31"
 
-    # main_fx(start_date=start_date, end_date=end_date)
-    # main_sp_stocks(start_date=start_date, end_date=end_date)
-    dbt_runner()
+#     main_fx(start_date=start_date, end_date=end_date)
+#     main_sp_stocks(start_date=start_date, end_date=end_date)
+#     dbt_runner()
