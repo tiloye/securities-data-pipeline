@@ -17,10 +17,10 @@ dependencies = [
     "dbt-core>=1.10.17",
     "dbt-postgres>=1.9.1",
     "prefect-dbt>=0.7.13",
-    "fastparquet>=2024.11.0",
     "psycopg2-binary>=2.9.11",
     "prefect-aws>=0.7.4",
     "prefect-sqlalchemy>=0.5.3",
+    "pyarrow>=23.0.0",
 ]
 
 [project.scripts]
