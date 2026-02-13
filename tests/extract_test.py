@@ -44,9 +44,12 @@ def s3_data():
     stock_symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
     )
+    stock_symbols["date_stamp"] = pd.to_datetime(stock_symbols["date_stamp"]).dt.date
     fx_symbol_path = f"{DATA_PATH}/symbols/fx.parquet"
     stock_symbol_path = f"{DATA_PATH}/symbols/sp_stocks.parquet"
-    fx_symbols.to_parquet(fx_symbol_path, index=False, storage_options=s3_storage_options)
+    fx_symbols.to_parquet(
+        fx_symbol_path, index=False, storage_options=s3_storage_options
+    )
     stock_symbols.to_parquet(
         stock_symbol_path, index=False, storage_options=s3_storage_options
     )
@@ -77,14 +80,57 @@ def s3_data():
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_get_fx_symbols_from_s3(asset_category):
-    expected_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
-    )["symbol"].to_list()
+def test_get_symbols_list_from_s3(asset_category):
+    expected_data = (
+        pd.read_csv(TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv"))[
+            "symbol"
+        ]
+        .unique()
+        .tolist()
+    )
 
     extracted_data = get_symbols_from_s3(asset_category)
 
     assert extracted_data == expected_data
+
+
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_get_symbols_data_from_s3(asset_category):
+    expected_data = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    )
+    if asset_category == "sp_stocks":
+        expected_data["date_stamp"] = pd.to_datetime(
+            expected_data["date_stamp"]
+        ).dt.date
+
+    extracted_data = get_symbols_from_s3(asset_category, symbols_only=False)
+
+    pd.testing.assert_frame_equal(extracted_data, expected_data)
+
+
+def test_get_sp_symbols_from_s3_by_date():
+    asset_category = "sp_stocks"
+    start_date = pd.Timestamp("2000-01-06").date()
+    end_date = pd.Timestamp("2000-01-07").date()
+
+    expected_data = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    )
+    expected_data["date_stamp"] = pd.to_datetime(expected_data["date_stamp"]).dt.date
+    mask = (expected_data["date_stamp"] >= start_date) & (
+        expected_data["date_stamp"] <= end_date
+    )
+    expected_data = expected_data.loc[mask].reset_index(drop=True)
+
+    price_df = get_symbols_from_s3(
+        asset_category,
+        symbols_only=False,
+        start=start_date,
+        end=end_date,
+    ).reset_index(drop=True)
+
+    pd.testing.assert_frame_equal(price_df, expected_data)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))

@@ -4,7 +4,13 @@ import pandas as pd
 import yfinance as yf
 from prefect import task
 
-from py_pipeline.config import AWS_ACCESS_KEY, AWS_SECRET_KEY, DATA_PATH, S3_ENDPOINT, ENV_NAME
+from py_pipeline.config import (
+    AWS_ACCESS_KEY,
+    AWS_SECRET_KEY,
+    DATA_PATH,
+    S3_ENDPOINT,
+    ENV_NAME,
+)
 
 ######### Symbols data extractors #########
 
@@ -48,7 +54,10 @@ def get_fx_symbols_from_source() -> pd.DataFrame:
 
 @task
 def get_symbols_from_s3(
-    asset_category: str, symbols_only: bool = True
+    asset_category: str,
+    symbols_only: bool = True,
+    start: pd.Timestamp | None = None,
+    end: pd.Timestamp | None = None,
 ) -> list[str] | pd.DataFrame:
     """Extract symbols data from the object store."""
 
@@ -67,7 +76,17 @@ def get_symbols_from_s3(
         symbols = symbols["symbol"].unique().tolist()
         return symbols
     else:
-        symbols = pd.read_parquet(f"{path}.parquet", storage_options=s3_storage_options)
+        if start and end:
+            symbols = pd.read_parquet(
+                f"{path}.parquet",
+                storage_options=s3_storage_options,
+                filters=[
+                    ("date_stamp", ">=", start),
+                    ("date_stamp", "<=", end),
+                ],
+            )
+        else:
+            symbols = pd.read_parquet(f"{path}.parquet", storage_options=s3_storage_options)
         return symbols
 
 
@@ -118,7 +137,7 @@ def get_prices_from_s3(
                 ("date", ">=", start),
                 ("date", "<=", end),
             ],
-        ).query(f"date >= '{start}' and date <= '{end}'")
+        )
     else:
         price_data = pd.read_parquet(path, storage_options=s3_storage_options)
     return price_data

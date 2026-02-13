@@ -63,7 +63,7 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: "2026-01-01"
+        "py_pipeline.transform.date_stamp", lambda: "2000-01-03"
     )
 
     etl_sp_stocks_symbols_to_s3()
@@ -78,6 +78,7 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
 
     expected_data = (
         pd.read_csv(TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv"))
+        .query("date_stamp == '2000-01-03'")
         .sort_values("symbol")
         .reset_index(drop=True)
     )
@@ -114,7 +115,7 @@ def test_dw_el_sp_stocks_symbols(monkeypatch):
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: "2026-01-01"
+        "py_pipeline.transform.date_stamp", lambda: "2000-01-03"
     )
     etl_sp_stocks_symbols_to_s3()
 
@@ -127,6 +128,7 @@ def test_dw_el_sp_stocks_symbols(monkeypatch):
     )
     expected_data = (
         pd.read_csv(TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv"))
+        .query("date_stamp == '2000-01-03'")
         .sort_values("symbol")
         .reset_index(drop=True)
     )
@@ -212,12 +214,8 @@ class TestETLBars:
         self, monkeypatch, price_data, asset_category, drop_dw_tables
     ):
         # First ETL run
-        if asset_category == "sp_stocks":
-            start = "2000-01-03"
-            end = "2000-01-06"
-        else:
-            start = "2006-05-16"
-            end = "2006-05-19"
+        start = "2000-01-03"
+        end = "2000-01-06"
 
         self._etl_bars_to_s3(
             monkeypatch,
@@ -229,12 +227,8 @@ class TestETLBars:
         el_bars_to_dw(asset_category)
 
         # Second ETL run to update data
-        if asset_category == "sp_stocks":
-            start = "2000-01-07"
-            end = "2000-01-07"
-        else:
-            start = "2006-05-22"
-            end = "2006-05-22"
+        start = "2000-01-07"
+        end = "2000-01-07"
 
         self._etl_bars_to_s3(
             monkeypatch,

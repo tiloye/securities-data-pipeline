@@ -1,7 +1,31 @@
 symbol,name,sector,industry,in_sp400,in_sp500,in_sp600,date_stamp
-E,Stock E,Sector 1,Industry 1,True,False,False,2026-01-01
-F,Stock F,Missing,Industry 2,False,False,True,2026-01-01
-C,Stock C,Sector 1,Industry 1,False,False,True,2026-01-01
-D-A,Stock D,Sector 2,Missing,True,False,False,2026-01-01
-A,Stock A,Sector 1,Industry 1,False,True,False,2026-01-01
-B-B,Stock B,Sector 2,Industry 2,False,True,False,2026-01-01
+E,Stock E,Sector 1,Industry 1,True,False,False,2000-01-03
+F,Stock F,Missing,Industry 2,False,False,True,2000-01-03
+C,Stock C,Sector 1,Industry 1,False,False,True,2000-01-03
+D-A,Stock D,Sector 2,Missing,True,False,False,2000-01-03
+A,Stock A,Sector 1,Industry 1,False,True,False,2000-01-03
+B-B,Stock B,Sector 2,Industry 2,False,True,False,2000-01-03
+E,Stock E,Sector 1,Industry 1,True,False,False,2000-01-04
+F,Stock F,Missing,Industry 2,False,False,True,2000-01-04
+C,Stock C,Sector 1,Industry 1,False,False,True,2000-01-04
+D-A,Stock D,Sector 2,Missing,True,False,False,2000-01-04
+A,Stock A,Sector 1,Industry 1,False,True,False,2000-01-04
+B-B,Stock B,Sector 2,Industry 2,False,True,False,2000-01-04
+E,Stock E,Sector 1,Industry 1,True,False,False,2000-01-05
+F,Stock F,Missing,Industry 2,False,False,True,2000-01-05
+C,Stock C,Sector 1,Industry 1,False,False,True,2000-01-05
+D-A,Stock D,Sector 2,Missing,True,False,False,2000-01-05
+A,Stock A,Sector 1,Industry 1,False,True,False,2000-01-05
+B-B,Stock B,Sector 2,Industry 2,False,True,False,2000-01-05
+E,Stock E,Sector 1,Industry 1,True,False,False,2000-01-06
+F,Stock F,Missing,Industry 2,False,False,True,2000-01-06
+C,Stock C,Sector 1,Industry 1,False,False,True,2000-01-06
+D-A,Stock D,Sector 2,Missing,True,False,False,2000-01-06
+A,Stock A,Sector 1,Industry 1,False,True,False,2000-01-06
+B-B,Stock B,Sector 2,Industry 2,False,True,False,2000-01-06
+E,Stock E,Sector 1,Industry 1,True,False,False,2000-01-07
+F,Stock F,Missing,Industry 2,False,False,True,2000-01-07
+C,Stock C,Sector 1,Industry 1,False,False,True,2000-01-07
+D-A,Stock D,Sector 2,Missing,True,False,False,2000-01-07
+A,Stock A,Sector 1,Industry 1,False,True,False,2000-01-07
+B-B,Stock B,Sector 2,Industry 2,False,True,False,2000-01-07

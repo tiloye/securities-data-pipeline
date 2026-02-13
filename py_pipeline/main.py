@@ -191,9 +191,17 @@ def etl_s3(
 
 
 @flow
-def el_dw(asset_category: str):
+def el_dw(
+    asset_category: str,
+    start: str | dt.date | None = None,
+    end: str | dt.date | None = None,
+):
     el_symbols_to_dw(asset_category)
-    el_bars_to_dw(asset_category)
+    el_bars_to_dw(
+        asset_category,
+        start=start,
+        end=end,
+    )
 
 
 @flow(log_prints=True)
@@ -324,10 +332,10 @@ def main() -> None:
         main_sp_stocks(symbols, start_date, end_date, chunk_size)
 
 
-# if __name__ == "__main__":
-#     start_date = "2025-01-01"
-#     end_date = "2025-01-31"
+if __name__ == "__main__":
+    start_date = "2025-01-01"
+    end_date = "2025-12-31"
 
-#     main_fx(start_date=start_date, end_date=end_date)
-#     main_sp_stocks(start_date=start_date, end_date=end_date)
-#     dbt_runner()
+    main_fx(start_date=start_date, end_date=end_date)
+    main_sp_stocks(start_date=start_date, end_date=end_date)
+    # dbt_runner()

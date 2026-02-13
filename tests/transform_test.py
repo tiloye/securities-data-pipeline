@@ -15,10 +15,10 @@ TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 def test_transform_stocks_symbol_df(monkeypatch):
     expected_transformed_data = pd.read_csv(
         TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
-    ).sort_values("symbol").reset_index(drop=True)
-    monkeypatch.setattr("py_pipeline.transform.date_stamp", lambda: "2026-01-01")
+    ).sort_values("symbol").query("date_stamp == '2000-01-03'").reset_index(drop=True)
 
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
+    monkeypatch.setattr("py_pipeline.transform.date_stamp", lambda: "2000-01-03")
     transformed_data = transform_stocks_symbol_df(symbols_df)
 
     # Sort dataframe by symbol to ensure it has the same order with expected dataframe
