@@ -56,8 +56,8 @@ def get_fx_symbols_from_source() -> pd.DataFrame:
 def get_symbols_from_s3(
     asset_category: str,
     symbols_only: bool = True,
-    start: pd.Timestamp | None = None,
-    end: pd.Timestamp | None = None,
+    start: dt.date | str | None = None,
+    end: dt.date | str | None = None,
 ) -> list[str] | pd.DataFrame:
     """Extract symbols data from the object store."""
 
@@ -75,18 +75,24 @@ def get_symbols_from_s3(
         )
         symbols = symbols["symbol"].unique().tolist()
         return symbols
-    else:
-        if start and end:
-            symbols = pd.read_parquet(
-                f"{path}.parquet",
-                storage_options=s3_storage_options,
-                filters=[
-                    ("date_stamp", ">=", start),
-                    ("date_stamp", "<=", end),
-                ],
-            )
-        else:
-            symbols = pd.read_parquet(f"{path}.parquet", storage_options=s3_storage_options)
+    
+    if (asset_category == "fx") or (start is None and end is None):
+        symbols = pd.read_parquet(f"{path}.parquet", storage_options=s3_storage_options)
+        return symbols
+
+    if start and end:
+        start = pd.Timestamp(start).date()
+        end = pd.Timestamp(end).date()
+        
+        symbols = pd.read_parquet(
+            f"{path}.parquet",
+            storage_options=s3_storage_options,
+            filters=[
+                ("date_stamp", ">=", start),
+                ("date_stamp", "<=", end),
+            ],
+        )
+
         return symbols
 
 
@@ -116,8 +122,8 @@ def log_failed_dowloads(asset_category: str) -> None:
 @task
 def get_prices_from_s3(
     asset_category: str,
-    start: pd.Timestamp | None = None,
-    end: pd.Timestamp | None = None,
+    start: dt.date | str | None = None,
+    end: dt.date | str | None = None,
 ) -> pd.DataFrame | None:
     """Extract historical price data from the object store."""
 
@@ -130,6 +136,9 @@ def get_prices_from_s3(
     path = f"{DATA_PATH}/price_history/{asset_category}.parquet"
 
     if start and end:
+        start = pd.Timestamp(start).date()
+        end = pd.Timestamp(end).date()
+
         price_data = pd.read_parquet(
             path,
             storage_options=s3_storage_options,

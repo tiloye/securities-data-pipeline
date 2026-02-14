@@ -56,12 +56,12 @@ def s3_data():
 
     # Load price data into S3 bucket
     fx_price_data = pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_prices.csv"))
-    fx_price_data["date"] = pd.to_datetime(fx_price_data["date"])
+    fx_price_data["date"] = pd.to_datetime(fx_price_data["date"]).dt.date
 
     stocks_price_data = pd.read_csv(
         TEST_DATA_DIR.joinpath("processed_sp_stocks_prices.csv")
     )
-    stocks_price_data["date"] = pd.to_datetime(stocks_price_data["date"])
+    stocks_price_data["date"] = pd.to_datetime(stocks_price_data["date"]).dt.date
 
     fx_price_path = f"{DATA_PATH}/price_history/fx.parquet"
     stock_price_path = f"{DATA_PATH}/price_history/sp_stocks.parquet"
@@ -139,6 +139,7 @@ def test_get_prices_from_s3(asset_category):
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
         parse_dates=["date"],
     )
+    expected_data["date"] = expected_data["date"].dt.date
 
     price_df = get_prices_from_s3(asset_category)
 
@@ -147,13 +148,13 @@ def test_get_prices_from_s3(asset_category):
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_get_prices_from_s3_by_date(asset_category):
-    start_date = pd.Timestamp("2006-05-19")
-    end_date = pd.Timestamp("2006-05-22")
+    start_date = pd.Timestamp("2000-01-03").date()
+    end_date = pd.Timestamp("2000-01-06").date()
 
     expected_data = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
-    expected_data["date"] = pd.to_datetime(expected_data["date"])
+    expected_data["date"] = pd.to_datetime(expected_data["date"]).dt.date
     mask = (expected_data["date"] >= start_date) & (expected_data["date"] <= end_date)
     expected_data = expected_data.loc[mask].reset_index(drop=True)
 

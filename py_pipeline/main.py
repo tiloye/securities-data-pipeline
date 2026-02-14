@@ -52,8 +52,14 @@ def etl_symbols_to_s3(asset_category: str) -> None:
 
 
 @flow
-def el_symbols_to_dw(asset_category: str) -> None:
-    symbols_df = get_symbols_from_s3(asset_category, symbols_only=False)
+def el_symbols_to_dw(
+    asset_category: str,
+    start: dt.date | str | None = None,
+    end: dt.date | str | None = None,
+) -> None:
+    symbols_df = get_symbols_from_s3(
+        asset_category, symbols_only=False, start=start, end=end
+    )
     load_to_dw(symbols_df, "symbols", asset_category)
 
     print(f"Successfully loaded {asset_category} symbols data to the database.")
@@ -124,9 +130,6 @@ def el_bars_to_dw(
     start: str | dt.date | None = None,
     end: str | dt.date | None = None,
 ) -> None:
-    if start and end:
-        start = pd.to_datetime(start)
-        end = pd.to_datetime(end)
     prices_df = get_prices_from_s3(asset_category, start, end)
     load_to_dw(prices_df, "price_history", asset_category)
 
@@ -196,7 +199,7 @@ def el_dw(
     start: str | dt.date | None = None,
     end: str | dt.date | None = None,
 ):
-    el_symbols_to_dw(asset_category)
+    el_symbols_to_dw(asset_category, start, end)
     el_bars_to_dw(
         asset_category,
         start=start,
@@ -222,7 +225,7 @@ def main_fx(
     except RuntimeError as e:
         print(f"ETL Warning: {e}")
 
-    el_dw("fx")
+    el_dw("fx", start=start_date, end=end_date)
 
 
 @flow(log_prints=True)
@@ -242,7 +245,7 @@ def main_sp_stocks(
         )
     except RuntimeError as e:
         print(f"ETL Warning: {e}")
-    el_dw("sp_stocks")
+    el_dw("sp_stocks", start=start_date, end=end_date)
 
 
 @task(log_prints=True)

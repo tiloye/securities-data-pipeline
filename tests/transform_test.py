@@ -61,7 +61,7 @@ def test_transform_price_df_returns_expected_df(asset_category):
     expected_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
     )
-    expected_df["date"] = pd.to_datetime(expected_df["date"]).astype("datetime64[us]")
+    expected_df["date"] = pd.to_datetime(expected_df["date"]).dt.date
 
     transformed_price_data = transform_price_df(price_data, asset_category)
 
