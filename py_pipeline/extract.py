@@ -12,6 +12,29 @@ from py_pipeline.config import (
     ENV_NAME,
 )
 
+
+######### Helper functions #########
+
+
+def _get_data_from_s3(
+    asset_category: str,
+    data_set: str,
+    columns: list[str] | None = None,
+    filters: list[str, str] | None = None,
+) -> pd.DataFrame:
+    """Helper to centralize S3 storage options and parquet reading."""
+    s3_storage_options = {
+        "key": AWS_ACCESS_KEY,
+        "secret": AWS_SECRET_KEY,
+        "endpoint_url": S3_ENDPOINT,
+    }
+    path = f"{DATA_PATH}/{data_set}/{asset_category}.parquet"
+
+    return pd.read_parquet(
+        path, storage_options=s3_storage_options, filters=filters, columns=columns
+    )
+
+
 ######### Symbols data extractors #########
 
 
@@ -61,39 +84,20 @@ def get_symbols_from_s3(
 ) -> list[str] | pd.DataFrame:
     """Extract symbols data from the object store."""
 
-    s3_storage_options = {
-        "key": AWS_ACCESS_KEY,
-        "secret": AWS_SECRET_KEY,
-        "endpoint_url": S3_ENDPOINT,
-    }
+    columns = ["symbol"] if symbols_only else None
+    filters = None
 
-    path = f"{DATA_PATH}/symbols/{asset_category}"
+    if asset_category != "fx" and start and end:
+        filters = [
+            ("date_stamp", ">=", pd.Timestamp(start).date()),
+            ("date_stamp", "<=", pd.Timestamp(end).date()),
+        ]
 
-    if symbols_only:
-        symbols = pd.read_parquet(
-            f"{path}.parquet", columns=["symbol"], storage_options=s3_storage_options
-        )
-        symbols = symbols["symbol"].unique().tolist()
-        return symbols
-    
-    if (asset_category == "fx") or (start is None and end is None):
-        symbols = pd.read_parquet(f"{path}.parquet", storage_options=s3_storage_options)
-        return symbols
+    df = _get_data_from_s3(
+        asset_category, "symbols", filters=filters, columns=columns
+    )
 
-    if start and end:
-        start = pd.Timestamp(start).date()
-        end = pd.Timestamp(end).date()
-        
-        symbols = pd.read_parquet(
-            f"{path}.parquet",
-            storage_options=s3_storage_options,
-            filters=[
-                ("date_stamp", ">=", start),
-                ("date_stamp", "<=", end),
-            ],
-        )
-
-        return symbols
+    return df["symbol"].unique().tolist() if symbols_only else df
 
 
 ######### Price data extractors #########
@@ -124,29 +128,14 @@ def get_prices_from_s3(
     asset_category: str,
     start: dt.date | str | None = None,
     end: dt.date | str | None = None,
-) -> pd.DataFrame | None:
+) -> pd.DataFrame:
     """Extract historical price data from the object store."""
-
-    s3_storage_options = {
-        "key": AWS_ACCESS_KEY,
-        "secret": AWS_SECRET_KEY,
-        "endpoint_url": S3_ENDPOINT,
-    }
-
-    path = f"{DATA_PATH}/price_history/{asset_category}.parquet"
-
+    
+    filters = None
     if start and end:
-        start = pd.Timestamp(start).date()
-        end = pd.Timestamp(end).date()
+        filters = [
+            ("date", ">=", pd.Timestamp(start).date()),
+            ("date", "<=", pd.Timestamp(end).date()),
+        ]
 
-        price_data = pd.read_parquet(
-            path,
-            storage_options=s3_storage_options,
-            filters=[
-                ("date", ">=", start),
-                ("date", "<=", end),
-            ],
-        )
-    else:
-        price_data = pd.read_parquet(path, storage_options=s3_storage_options)
-    return price_data
+    return _get_data_from_s3(asset_category, "price_history", filters=filters)
