@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import pandera.pandas as pa
 import pytest
 
 from py_pipeline.config import (
@@ -17,10 +18,23 @@ engine = DB_ENGINE
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_load_symbols_data_to_s3_raises_schema_error(asset_category):
+    source_symbol = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    )
+    source_symbol.rename(columns={"symbol": "ticker"}, inplace=True)
+
+    with pytest.raises(pa.errors.SchemaErrors):
+        load_to_s3(source_symbol, "symbols", asset_category)
+
+
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_symbols_data_to_s3(asset_category, remove_s3_objects):
     symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
     )
+    if asset_category == "sp_stocks":
+        symbols["date_stamp"] = pd.to_datetime(symbols["date_stamp"]).dt.date
 
     load_to_s3(symbols, "symbols", asset_category)
 
@@ -50,11 +64,13 @@ def test_load_symbols_data_to_dw(asset_category, drop_dw_tables):
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-def test_update_sp_symbols_data_on_s3(asset_category, remove_s3_objects):
+def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
     # Load historical data
     symbols = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
     )
+    if asset_category == "sp_stocks":
+        symbols["date_stamp"] = pd.to_datetime(symbols["date_stamp"]).dt.date
     load_to_s3(symbols, "symbols", asset_category)
 
     # Load update
@@ -62,6 +78,7 @@ def test_update_sp_symbols_data_on_s3(asset_category, remove_s3_objects):
         symbols_update = pd.read_csv(
             TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols_update.csv")
         )
+        symbols_update["date_stamp"] = pd.to_datetime(symbols_update["date_stamp"]).dt.date
     else:
         symbols_update = symbols.copy()
     load_to_s3(symbols_update, "symbols", asset_category)
@@ -123,11 +140,23 @@ def test_update_symbols_data_on_dw(asset_category, drop_dw_tables):
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_load_price_data_to_s3_raises_schema_error(asset_category):
+    transformed_prices = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+        parse_dates=True,
+    )
+    transformed_prices.rename(columns={"date": "timestamp"}, inplace=True)
+
+    with pytest.raises(pa.errors.SchemaErrors):
+        load_to_s3(transformed_prices, "price_history", asset_category)
+
+
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_price_data_to_s3(asset_category, remove_s3_objects):
     price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
     )
-    price_df["date"] = pd.to_datetime(price_df["date"]).astype("datetime64[us]")
+    price_df["date"] = pd.to_datetime(price_df["date"]).dt.date
 
     load_to_s3(price_df, "price_history", asset_category)
 
@@ -162,12 +191,14 @@ def test_update_price_on_s3(asset_category, remove_s3_objects):
     hist_price_df = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
     )
+    hist_price_df["date"] = pd.to_datetime(hist_price_df["date"]).dt.date
     load_to_s3(hist_price_df, "price_history", asset_category)
 
     # Load price update
     price_update = pd.read_csv(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices_update.csv")
     )
+    price_update["date"] = pd.to_datetime(price_update["date"]).dt.date
     load_to_s3(price_update, "price_history", asset_category)
 
     # Verify merged data

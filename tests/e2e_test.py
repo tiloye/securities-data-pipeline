@@ -58,12 +58,12 @@ def test_s3_etl_fx_symbols(remove_s3_objects):
 
 
 def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
-    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
+    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
     monkeypatch.setattr(
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: "2000-01-03"
+        "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
     )
 
     etl_sp_stocks_symbols_to_s3()
@@ -82,6 +82,7 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
         .sort_values("symbol")
         .reset_index(drop=True)
     )
+    expected_data["date_stamp"] = pd.to_datetime(expected_data["date_stamp"]).dt.date
 
     pd.testing.assert_frame_equal(loaded_data, expected_data)
 
@@ -110,12 +111,12 @@ def test_dw_el_fx_symbols():
 
 
 def test_dw_el_sp_stocks_symbols(monkeypatch):
-    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
+    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
     monkeypatch.setattr(
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: "2000-01-03"
+        "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
     )
     etl_sp_stocks_symbols_to_s3()
 
@@ -152,7 +153,7 @@ def price_data():
         )
         if start and end:
             data = data.loc[start:end]
-        return data[symbols] if symbols else data
+        return data.loc[:, pd.IndexSlice[:, symbols]] if symbols else data
 
     return _price_data
 

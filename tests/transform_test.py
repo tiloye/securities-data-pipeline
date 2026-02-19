@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import pandera.pandas as pa
 import pytest
 
 from py_pipeline.transform import (
@@ -12,12 +13,29 @@ from py_pipeline.transform import (
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 
 
-def test_transform_stocks_symbol_df(monkeypatch):
-    expected_transformed_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
-    ).sort_values("symbol").query("date_stamp == '2000-01-03'").reset_index(drop=True)
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_transform_symbols_raises_schema_error(asset_category):
+    source_symbol = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"raw_{asset_category}_symbols.csv")
+    )
+    source_symbol.rename(columns={"Symbol": "Ticker"}, inplace=True)
 
-    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_symbols.csv"))
+    with pytest.raises(pa.errors.SchemaErrors):
+        if asset_category == "fx":
+            transform_fx_symbol_df(source_symbol)
+        else:
+            transform_stocks_symbol_df(source_symbol)
+
+
+def test_transform_stocks_symbol_df(monkeypatch):
+    expected_transformed_data = (
+        pd.read_csv(TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv"))
+        .sort_values("symbol")
+        .query("date_stamp == '2000-01-03'")
+        .reset_index(drop=True)
+    )
+
+    symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
     monkeypatch.setattr("py_pipeline.transform.date_stamp", lambda: "2000-01-03")
     transformed_data = transform_stocks_symbol_df(symbols_df)
 
@@ -62,10 +80,25 @@ def test_transform_price_df_returns_expected_df(asset_category):
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
     )
     expected_df["date"] = pd.to_datetime(expected_df["date"]).dt.date
+    expected_df["volume"] = expected_df["volume"].astype("Int64")
 
     transformed_price_data = transform_price_df(price_data, asset_category)
 
     pd.testing.assert_frame_equal(transformed_price_data, expected_df)
+
+
+@pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+def test_transform_price_df_raises_schema_error(asset_category):
+    source_price = pd.read_csv(
+        TEST_DATA_DIR.joinpath(f"raw_{asset_category}_prices.csv"),
+        index_col=[0],
+        header=[0, 1],
+        parse_dates=True,
+    )
+    source_price.columns.names = ["Symbol", "Price"]
+
+    with pytest.raises(pa.errors.SchemaErrors):
+        transform_price_df(source_price, asset_category)
 
 
 if __name__ == "__main__":

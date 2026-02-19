@@ -10,6 +10,11 @@ from py_pipeline.config import (
     S3_ENDPOINT,
     DB_ENGINE,
 )
+from py_pipeline.validate import (
+    transformed_stock_symbols_schema,
+    transformed_fx_symbols_schema,
+    transformed_price_schema,
+)
 
 s3_storage_options = {
     "key": AWS_ACCESS_KEY,
@@ -29,6 +34,11 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     path = f"{DATA_PATH}/{dataset}/{asset_category}"
     try:
         if dataset == "symbols":
+            df = (
+                transformed_stock_symbols_schema(df, lazy=True)
+                if asset_category == "sp_stocks"
+                else transformed_fx_symbols_schema(df, lazy=True)
+            )
             merged_data = duckdb.sql(
                 (
                     f"""
@@ -42,6 +52,7 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
                 )
             )
         else:
+            df = transformed_price_schema.validate(df, lazy=True)
             merged_data = duckdb.sql(
                 f"SELECT * FROM '{path}.parquet' UNION SELECT * FROM df ORDER BY date, symbol"
             )
