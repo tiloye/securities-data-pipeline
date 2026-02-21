@@ -89,7 +89,7 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
             """,
             con=engine,
         )
-    except Exception:
+    except pd.errors.DatabaseError:
         df.to_sql(table_name, index=False, con=engine, if_exists="append")
     else:
         if dataset == "symbols" and asset_category == "fx":
