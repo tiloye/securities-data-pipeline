@@ -1,4 +1,5 @@
 import duckdb
+import dlt
 import pandas as pd
 from fsspec import filesystem
 from prefect import task
@@ -73,30 +74,61 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
 
     engine = DB_ENGINE
     table_name = f"{dataset}_{asset_category}"
-
+    write_disposition = "merge"
+    
     if dataset == "symbols":
-        lookup_cols = (
+        primary_key = (
             ["symbol", "date_stamp"] if asset_category == "sp_stocks" else ["symbol"]
         )
+        if asset_category == "fx":
+            write_disposition = "replace"
     else:
-        lookup_cols = ["date", "symbol"]
+        # For price_history
+        primary_key = ["date", "symbol"]
 
-    try:
-        existing_data_symbols_df = pd.read_sql(
-            f"""
-            SELECT {",".join(lookup_cols)}
-            FROM {table_name}
-            """,
-            con=engine,
-        )
-    except pd.errors.DatabaseError:
-        df.to_sql(table_name, index=False, con=engine, if_exists="append")
-    else:
-        if dataset == "symbols" and asset_category == "fx":
-            df.to_sql(table_name, index=False, con=engine, if_exists="replace")
-        else:
-            mask = ~df.set_index(lookup_cols).index.isin(
-                existing_data_symbols_df.set_index(lookup_cols).index
-            )
-            df = df[mask]
-            df.to_sql(table_name, index=False, con=engine, if_exists="append")
+    dlt.config["load.delete_completed_jobs"] = True
+    dlt.config["load.truncate_staging_dataset"] = True
+
+    pipeline = dlt.pipeline(
+        pipeline_name=f"sec_dw_loader_{asset_category}",
+        destination=dlt.destinations.postgres(
+            engine.url.render_as_string(hide_password=False)
+        ),
+        dataset_name="public",
+    )
+    
+    load_info = pipeline.run(
+        df,
+        table_name=table_name,
+        write_disposition=write_disposition,
+        primary_key=primary_key,
+    )
+
+    print(load_info)
+
+    # if dataset == "symbols":
+    #     lookup_cols = (
+    #         ["symbol", "date_stamp"] if asset_category == "sp_stocks" else ["symbol"]
+    #     )
+    # else:
+    #     lookup_cols = ["date", "symbol"]
+
+    # try:
+    #     existing_data_symbols_df = pd.read_sql(
+    #         f"""
+    #         SELECT {",".join(lookup_cols)}
+    #         FROM {table_name}
+    #         """,
+    #         con=engine,
+    #     )
+    # except pd.errors.DatabaseError:
+    #     df.to_sql(table_name, index=False, con=engine, if_exists="append")
+    # else:
+    #     if dataset == "symbols" and asset_category == "fx":
+    #         df.to_sql(table_name, index=False, con=engine, if_exists="replace")
+    #     else:
+    #         mask = ~df.set_index(lookup_cols).index.isin(
+    #             existing_data_symbols_df.set_index(lookup_cols).index
+    #         )
+    #         df = df[mask]
+    #         df.to_sql(table_name, index=False, con=engine, if_exists="append")

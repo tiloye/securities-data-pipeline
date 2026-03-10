@@ -11,10 +11,12 @@ from py_pipeline.config import (
     S3_ENDPOINT,
 )
 
+
 @pytest.fixture(autouse=True, scope="session")
 def prefect_test_fixture():
     with prefect_test_harness():
         yield
+
 
 engine = DB_ENGINE
 client = Minio(
@@ -47,4 +49,6 @@ def drop_dw_tables():
         for asset_category in ("fx", "sp_stocks"):
             con.execute(text(f"DROP TABLE IF EXISTS symbols_{asset_category};"))
             con.execute(text(f"DROP TABLE IF EXISTS price_history_{asset_category};"))
+        for table in ["_dlt_loads", "_dlt_pipeline_state", "_dlt_version"]:
+            con.execute(text(f"DROP TABLE IF EXISTS {table};"))
         con.commit()

@@ -22,6 +22,7 @@ dependencies = [
     "prefect-sqlalchemy>=0.5.3",
     "pyarrow>=23.0.0",
     "pandera[pandas]>=0.29.0",
+    "dlt>=1.23.0",
 ]
 
 [project.scripts]
