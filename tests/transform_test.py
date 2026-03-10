@@ -29,14 +29,18 @@ def test_transform_symbols_raises_schema_error(asset_category):
 
 def test_transform_stocks_symbol_df(monkeypatch):
     expected_transformed_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv"))
+        pd.read_parquet(
+            TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.parquet"),
+            filters=[("date_stamp", "=", pd.Timestamp("2000-01-03").date())],
+        )
         .sort_values("symbol")
-        .query("date_stamp == '2000-01-03'")
         .reset_index(drop=True)
+    )
+    monkeypatch.setattr(
+        "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
     )
 
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
-    monkeypatch.setattr("py_pipeline.transform.date_stamp", lambda: "2000-01-03")
     transformed_data = transform_stocks_symbol_df(symbols_df)
 
     # Sort dataframe by symbol to ensure it has the same order with expected dataframe
@@ -46,8 +50,8 @@ def test_transform_stocks_symbol_df(monkeypatch):
 
 
 def test_transform_fx_symbol_df():
-    expected_transformed_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath("processed_fx_symbols.csv")
+    expected_transformed_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath("processed_fx_symbols.parquet")
     )
 
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_fx_symbols.csv"))
@@ -76,8 +80,8 @@ def test_transform_price_df_returns_expected_df(asset_category):
         index_col=[0],
         parse_dates=True,
     )
-    expected_df = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+    expected_df = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
     )
     expected_df["date"] = pd.to_datetime(expected_df["date"]).dt.date
     expected_df["volume"] = expected_df["volume"].astype("Int64")

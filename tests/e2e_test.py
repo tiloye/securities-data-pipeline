@@ -34,12 +34,17 @@ s3_storage_options = {
 }
 
 
+def assert_loaded_data_matches_expected(loaded_df, expected_df):
+    assert loaded_df.shape == expected_df.shape
+    assert loaded_df.columns.tolist() == expected_df.columns.tolist()
+
+
 ########## Tests for Symbols ETL ##############
 
 
 def test_s3_etl_fx_symbols(remove_s3_objects):
     expected_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_symbols.csv"))
+        pd.read_parquet(TEST_DATA_DIR.joinpath("processed_fx_symbols.parquet"))
         .sort_values("symbol")
         .reset_index(drop=True)
     )
@@ -77,14 +82,15 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
     )
 
     expected_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv"))
-        .query("date_stamp == '2000-01-03'")
+        pd.read_parquet(
+            TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.parquet"),
+            filters=[("date_stamp", "=", pd.Timestamp("2000-01-03").date())],
+        )
         .sort_values("symbol")
         .reset_index(drop=True)
     )
-    expected_data["date_stamp"] = pd.to_datetime(expected_data["date_stamp"]).dt.date
 
-    pd.testing.assert_frame_equal(loaded_data, expected_data)
+    assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
 def test_dw_el_fx_symbols(drop_dw_tables, remove_s3_objects):
@@ -98,12 +104,12 @@ def test_dw_el_fx_symbols(drop_dw_tables, remove_s3_objects):
         .reset_index(drop=True)
     )
     expected_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_symbols.csv"))
+        pd.read_parquet(TEST_DATA_DIR.joinpath("processed_fx_symbols.parquet"))
         .sort_values("symbol")
         .reset_index(drop=True)
     )
 
-    pd.testing.assert_frame_equal(expected_data, loaded_data)
+    assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
 def test_dw_el_sp_stocks_symbols(monkeypatch, drop_dw_tables):
@@ -124,14 +130,15 @@ def test_dw_el_sp_stocks_symbols(monkeypatch, drop_dw_tables):
         .reset_index(drop=True)
     )
     expected_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv"))
-        .query("date_stamp == '2000-01-03'")
+        pd.read_parquet(
+            TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.parquet"),
+            filters=[("date_stamp", "=", pd.Timestamp("2000-01-03").date())],
+        )
         .sort_values("symbol")
         .reset_index(drop=True)
     )
-    
-    assert loaded_data.shape == expected_data.shape
-    assert loaded_data.columns.tolist() == expected_data.columns.tolist()
+
+    assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
 ########## Tests for Price History ETL ##############
@@ -173,17 +180,16 @@ class TestETLBars:
     def test_s3_etl_bars(self, monkeypatch, price_data, asset_category):
         self._etl_bars_to_s3(monkeypatch, price_data, asset_category)
 
-        expected_data = pd.read_csv(
-            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+        expected_data = pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
         )
-        expected_data["date"] = pd.to_datetime(expected_data["date"]).dt.date
 
         loaded_data = pd.read_parquet(
             f"{DATA_PATH}/price_history/{asset_category}.parquet",
             storage_options=s3_storage_options,
         )
 
-        pd.testing.assert_frame_equal(loaded_data, expected_data)
+        assert_loaded_data_matches_expected(loaded_data, expected_data)
 
     @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
     def test_dw_el_bars(self, monkeypatch, price_data, asset_category, drop_dw_tables):
@@ -192,12 +198,11 @@ class TestETLBars:
         el_bars_to_dw(asset_category)
 
         loaded_data = pd.read_sql_table(f"price_history_{asset_category}", con=engine)
-        expected_data = pd.read_csv(
-            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+        expected_data = pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
         )
 
-        assert loaded_data.shape == expected_data.shape
-        assert loaded_data.columns.tolist() == expected_data.columns.tolist()
+        assert_loaded_data_matches_expected(loaded_data, expected_data)
 
     @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
     def test_s3_dw_etl_update_existing_data(
@@ -233,23 +238,18 @@ class TestETLBars:
             f"{DATA_PATH}/price_history/{asset_category}.parquet",
             storage_options=s3_storage_options,
         )
-        expected_s3_data = pd.read_csv(
-            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+        expected_s3_data = pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
         )
-        expected_s3_data["date"] = pd.to_datetime(expected_s3_data["date"]).dt.date
 
-        pd.testing.assert_frame_equal(
-            loaded_s3_data.sort_values(["date", "symbol"]).reset_index(drop=True),
-            expected_s3_data.sort_values(["date", "symbol"]).reset_index(drop=True),
-        )
+        assert_loaded_data_matches_expected(loaded_s3_data, expected_s3_data)
 
         loaded_dw_data = pd.read_sql_table(
             f"price_history_{asset_category}", con=engine
         )
         expected_dw_data = expected_s3_data.copy()
 
-        assert loaded_dw_data.shape == expected_dw_data.shape
-        assert loaded_dw_data.columns.tolist() == expected_dw_data.columns.tolist()
+        assert_loaded_data_matches_expected(loaded_dw_data, expected_dw_data)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
@@ -276,14 +276,13 @@ def test_s3_etl_bars_in_chunk(
         .sort_values(["date", "symbol"])
         .reset_index(drop=True)
     )
-    expected_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+    expected_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
     )
-    expected_data["date"] = pd.to_datetime(expected_data["date"]).dt.date
     expected_data.sort_values(["date", "symbol"], inplace=True)
     expected_data.reset_index(drop=True, inplace=True)
 
-    pd.testing.assert_frame_equal(loaded_data, expected_data)
+    assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))

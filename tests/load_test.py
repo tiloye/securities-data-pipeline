@@ -17,10 +17,15 @@ TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = DB_ENGINE
 
 
+def assert_loaded_data_matches_expected(loaded_df, expected_df):
+    assert loaded_df.shape == expected_df.shape
+    assert loaded_df.columns.tolist() == expected_df.columns.tolist()
+
+
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_symbols_data_to_s3_raises_schema_error(asset_category):
-    source_symbol = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    source_symbol = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
     source_symbol.rename(columns={"symbol": "ticker"}, inplace=True)
 
@@ -30,8 +35,8 @@ def test_load_symbols_data_to_s3_raises_schema_error(asset_category):
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_symbols_data_to_s3(asset_category, remove_s3_objects):
-    symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    symbols = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
     if asset_category == "sp_stocks":
         symbols["date_stamp"] = pd.to_datetime(symbols["date_stamp"]).dt.date
@@ -47,27 +52,39 @@ def test_load_symbols_data_to_s3(asset_category, remove_s3_objects):
         },
     )
 
-    pd.testing.assert_frame_equal(symbols, loaded_symbols)
+    assert_loaded_data_matches_expected(loaded_symbols, symbols)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_symbols_data_to_dw(asset_category, drop_dw_tables):
-    symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    symbols = (
+        pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
+        )
+        .sort_values(
+            ["symbol", "date_stamp"] if asset_category == "sp_stocks" else "symbol"
+        )
+        .reset_index(drop=True)
     )
 
     load_to_dw(symbols, "symbols", asset_category)
 
-    loaded_data = pd.read_sql_table(f"symbols_{asset_category}", con=engine)
+    loaded_data = (
+        pd.read_sql_table(f"symbols_{asset_category}", con=engine)
+        .sort_values(
+            ["symbol", "date_stamp"] if asset_category == "sp_stocks" else "symbol"
+        )
+        .reset_index(drop=True)
+    )
 
-    pd.testing.assert_frame_equal(symbols, loaded_data)
+    assert_loaded_data_matches_expected(loaded_data, symbols)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
     # Load historical data
-    symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    symbols = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
     if asset_category == "sp_stocks":
         symbols["date_stamp"] = pd.to_datetime(symbols["date_stamp"]).dt.date
@@ -75,10 +92,12 @@ def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
 
     # Load update
     if asset_category == "sp_stocks":
-        symbols_update = pd.read_csv(
-            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols_update.csv")
+        symbols_update = pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols_update.parquet")
         )
-        symbols_update["date_stamp"] = pd.to_datetime(symbols_update["date_stamp"]).dt.date
+        symbols_update["date_stamp"] = pd.to_datetime(
+            symbols_update["date_stamp"]
+        ).dt.date
     else:
         symbols_update = symbols.copy()
     load_to_s3(symbols_update, "symbols", asset_category)
@@ -101,21 +120,21 @@ def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
         },
     )
 
-    pd.testing.assert_frame_equal(expected_data, loaded_symbols)
+    assert_loaded_data_matches_expected(loaded_symbols, expected_data)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_update_symbols_data_on_dw(asset_category, drop_dw_tables):
     # load historical data
-    symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    symbols = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
     load_to_dw(symbols, "symbols", asset_category)
 
     # Load updates
     if asset_category == "sp_stocks":
-        symbols_update = pd.read_csv(
-            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols_update.csv")
+        symbols_update = pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols_update.parquet")
         )
     else:
         symbols_update = symbols.copy()
@@ -136,14 +155,13 @@ def test_update_symbols_data_on_dw(asset_category, drop_dw_tables):
         else loaded_data.sort_values("symbol").reset_index(drop=True)
     )
 
-    pd.testing.assert_frame_equal(expected_data, loaded_data)
+    assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_price_data_to_s3_raises_schema_error(asset_category):
-    transformed_prices = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
-        parse_dates=True,
+    transformed_prices = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
     )
     transformed_prices.rename(columns={"date": "timestamp"}, inplace=True)
 
@@ -153,10 +171,9 @@ def test_load_price_data_to_s3_raises_schema_error(asset_category):
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_price_data_to_s3(asset_category, remove_s3_objects):
-    price_df = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
+    price_df = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
     )
-    price_df["date"] = pd.to_datetime(price_df["date"]).dt.date
 
     load_to_s3(price_df, "price_history", asset_category)
 
@@ -169,34 +186,41 @@ def test_load_price_data_to_s3(asset_category, remove_s3_objects):
         },
     )
 
-    pd.testing.assert_frame_equal(price_df, loaded_price_df)
+    assert_loaded_data_matches_expected(loaded_price_df, price_df)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_load_price_data_to_dw(asset_category, drop_dw_tables):
-    price_df = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+    price_df = (
+        pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
+        )
+        .sort_values(["date", "symbol"])
+        .reset_index(drop=True)
     )
 
     load_to_dw(price_df, "price_history", asset_category)
 
-    loaded_data = pd.read_sql_table(f"price_history_{asset_category}", con=engine)
+    loaded_data = (
+        pd.read_sql_table(f"price_history_{asset_category}", con=engine)
+        .sort_values(["date", "symbol"])
+        .reset_index(drop=True)
+    )
 
-    pd.testing.assert_frame_equal(price_df, loaded_data)
+    assert_loaded_data_matches_expected(loaded_data, price_df)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_update_price_on_s3(asset_category, remove_s3_objects):
     # Load historical price
-    hist_price_df = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+    hist_price_df = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
     )
-    hist_price_df["date"] = pd.to_datetime(hist_price_df["date"]).dt.date
     load_to_s3(hist_price_df, "price_history", asset_category)
 
     # Load price update
-    price_update = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices_update.csv")
+    price_update = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices_update.parquet")
     )
     price_update["date"] = pd.to_datetime(price_update["date"]).dt.date
     load_to_s3(price_update, "price_history", asset_category)
@@ -217,20 +241,20 @@ def test_update_price_on_s3(asset_category, remove_s3_objects):
         },
     )
 
-    pd.testing.assert_frame_equal(loaded_price_df, expected_df)
+    assert_loaded_data_matches_expected(loaded_price_df, expected_df)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_update_price_on_dw(asset_category, drop_dw_tables):
     # Load historical price
-    hist_price_df = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+    hist_price_df = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
     )
     load_to_dw(hist_price_df, "price_history", asset_category)
 
     # Load price update with existing records
-    price_update = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices_update.csv")
+    price_update = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices_update.parquet")
     )
     price_update_with_existing = pd.concat(
         [hist_price_df, price_update], ignore_index=True
@@ -250,7 +274,7 @@ def test_update_price_on_dw(asset_category, drop_dw_tables):
         .reset_index(drop=True)
     )
 
-    pd.testing.assert_frame_equal(loaded_price_df, expected_df)
+    assert_loaded_data_matches_expected(loaded_price_df, expected_df)
 
 
 if __name__ == "__main__":

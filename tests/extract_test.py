@@ -40,13 +40,14 @@ def s3_data():
     }
 
     # Load symbols data into S3 bucket
-    fx_symbols = pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_symbols.csv"))
-    stock_symbols = pd.read_csv(
-        TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.csv")
+    fx_symbols = pd.read_parquet(TEST_DATA_DIR.joinpath("processed_fx_symbols.parquet"))
+    stock_symbols = pd.read_parquet(
+        TEST_DATA_DIR.joinpath("processed_sp_stocks_symbols.parquet")
     )
-    stock_symbols["date_stamp"] = pd.to_datetime(stock_symbols["date_stamp"]).dt.date
+
     fx_symbol_path = f"{DATA_PATH}/symbols/fx.parquet"
     stock_symbol_path = f"{DATA_PATH}/symbols/sp_stocks.parquet"
+
     fx_symbols.to_parquet(
         fx_symbol_path, index=False, storage_options=s3_storage_options
     )
@@ -55,11 +56,13 @@ def s3_data():
     )
 
     # Load price data into S3 bucket
-    fx_price_data = pd.read_csv(TEST_DATA_DIR.joinpath("processed_fx_prices.csv"))
+    fx_price_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath("processed_fx_prices.parquet")
+    )
     fx_price_data["date"] = pd.to_datetime(fx_price_data["date"]).dt.date
 
-    stocks_price_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath("processed_sp_stocks_prices.csv")
+    stocks_price_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath("processed_sp_stocks_prices.parquet")
     )
     stocks_price_data["date"] = pd.to_datetime(stocks_price_data["date"]).dt.date
 
@@ -82,9 +85,9 @@ def s3_data():
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_get_symbols_list_from_s3(asset_category):
     expected_data = (
-        pd.read_csv(TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv"))[
-            "symbol"
-        ]
+        pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
+        )["symbol"]
         .unique()
         .tolist()
     )
@@ -96,8 +99,8 @@ def test_get_symbols_list_from_s3(asset_category):
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_get_symbols_data_from_s3(asset_category):
-    expected_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    expected_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
     if asset_category == "sp_stocks":
         expected_data["date_stamp"] = pd.to_datetime(
@@ -114,8 +117,8 @@ def test_get_sp_symbols_from_s3_by_date():
     start_date = pd.Timestamp("2000-01-06").date()
     end_date = pd.Timestamp("2000-01-07").date()
 
-    expected_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.csv")
+    expected_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
     expected_data["date_stamp"] = pd.to_datetime(expected_data["date_stamp"]).dt.date
     mask = (expected_data["date_stamp"] >= start_date) & (
@@ -135,11 +138,9 @@ def test_get_sp_symbols_from_s3_by_date():
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_get_prices_from_s3(asset_category):
-    expected_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv"),
-        parse_dates=["date"],
+    expected_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
     )
-    expected_data["date"] = expected_data["date"].dt.date
 
     price_df = get_prices_from_s3(asset_category)
 
@@ -151,10 +152,10 @@ def test_get_prices_from_s3_by_date(asset_category):
     start_date = pd.Timestamp("2000-01-03").date()
     end_date = pd.Timestamp("2000-01-06").date()
 
-    expected_data = pd.read_csv(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.csv")
+    expected_data = pd.read_parquet(
+        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
     )
-    expected_data["date"] = pd.to_datetime(expected_data["date"]).dt.date
+
     mask = (expected_data["date"] >= start_date) & (expected_data["date"] <= end_date)
     expected_data = expected_data.loc[mask].reset_index(drop=True)
 
