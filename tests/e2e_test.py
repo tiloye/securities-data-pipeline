@@ -2,12 +2,11 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from sqlalchemy import text
+from deltalake import DeltaTable
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
-    BUCKET_NAME,
     DATA_PATH,
     S3_ENDPOINT,
     DB_ENGINE,
@@ -28,9 +27,10 @@ TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = DB_ENGINE
 
 s3_storage_options = {
-    "key": AWS_ACCESS_KEY,
-    "secret": AWS_SECRET_KEY,
-    "endpoint_url": S3_ENDPOINT,
+    "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY,
+    "AWS_SECRET_ACCESS_KEY": AWS_SECRET_KEY,
+    "AWS_ENDPOINT_URL": S3_ENDPOINT,
+    "AWS_ALLOW_HTTP": "true",
 }
 
 
@@ -51,10 +51,8 @@ def test_s3_etl_fx_symbols(remove_s3_objects):
 
     etl_fx_symbols_to_s3()
     loaded_data = (
-        pd.read_parquet(
-            f"{DATA_PATH}/symbols/fx.parquet",
-            storage_options=s3_storage_options,
-        )
+        DeltaTable(f"{DATA_PATH}/symbols/fx", storage_options=s3_storage_options)
+        .to_pandas()
         .sort_values("symbol")
         .reset_index(drop=True)
     )
@@ -73,10 +71,8 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
 
     etl_sp_stocks_symbols_to_s3()
     loaded_data = (
-        pd.read_parquet(
-            f"{DATA_PATH}/symbols/sp_stocks.parquet",
-            storage_options=s3_storage_options,
-        )
+        DeltaTable(f"{DATA_PATH}/symbols/sp_stocks", storage_options=s3_storage_options)
+        .to_pandas()
         .sort_values("symbol")
         .reset_index(drop=True)
     )
@@ -184,10 +180,10 @@ class TestETLBars:
             TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
         )
 
-        loaded_data = pd.read_parquet(
-            f"{DATA_PATH}/price_history/{asset_category}.parquet",
+        loaded_data = DeltaTable(
+            f"{DATA_PATH}/price_history/{asset_category}",
             storage_options=s3_storage_options,
-        )
+        ).to_pandas()
 
         assert_loaded_data_matches_expected(loaded_data, expected_data)
 
@@ -234,10 +230,10 @@ class TestETLBars:
         )
         el_bars_to_dw(asset_category, start, end)
 
-        loaded_s3_data = pd.read_parquet(
-            f"{DATA_PATH}/price_history/{asset_category}.parquet",
+        loaded_s3_data = DeltaTable(
+            f"{DATA_PATH}/price_history/{asset_category}",
             storage_options=s3_storage_options,
-        )
+        ).to_pandas()
         expected_s3_data = pd.read_parquet(
             TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
         )
@@ -269,10 +265,11 @@ def test_s3_etl_bars_in_chunk(
     etl_bars_to_s3(asset_category, symbols, "2000-01-01", "2000-01-05", chunk_size=2)
 
     loaded_data = (
-        pd.read_parquet(
-            f"s3://{BUCKET_NAME}/price_history/{asset_category}.parquet",
+        DeltaTable(
+            f"{DATA_PATH}/price_history/{asset_category}",
             storage_options=s3_storage_options,
         )
+        .to_pandas()
         .sort_values(["date", "symbol"])
         .reset_index(drop=True)
     )

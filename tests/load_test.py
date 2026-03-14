@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pandera.pandas as pa
 import pytest
+from deltalake import DeltaTable
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
@@ -15,6 +16,13 @@ from py_pipeline.load import load_to_dw, load_to_s3
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
 engine = DB_ENGINE
+
+storage_options = {
+    "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY,
+    "AWS_SECRET_ACCESS_KEY": AWS_SECRET_KEY,
+    "AWS_ENDPOINT_URL": S3_ENDPOINT,
+    "AWS_ALLOW_HTTP": "true",
+}
 
 
 def assert_loaded_data_matches_expected(loaded_df, expected_df):
@@ -38,19 +46,12 @@ def test_load_symbols_data_to_s3(asset_category, remove_s3_objects):
     symbols = pd.read_parquet(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
-    if asset_category == "sp_stocks":
-        symbols["date_stamp"] = pd.to_datetime(symbols["date_stamp"]).dt.date
 
     load_to_s3(symbols, "symbols", asset_category)
 
-    loaded_symbols = pd.read_parquet(
-        f"{DATA_PATH}/symbols/{asset_category}.parquet",
-        storage_options={
-            "key": AWS_ACCESS_KEY,
-            "secret": AWS_SECRET_KEY,
-            "endpoint_url": S3_ENDPOINT,
-        },
-    )
+    loaded_symbols = DeltaTable(
+        f"{DATA_PATH}/symbols/{asset_category}", storage_options=storage_options
+    ).to_pandas()
 
     assert_loaded_data_matches_expected(loaded_symbols, symbols)
 
@@ -86,8 +87,6 @@ def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
     symbols = pd.read_parquet(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols.parquet")
     )
-    if asset_category == "sp_stocks":
-        symbols["date_stamp"] = pd.to_datetime(symbols["date_stamp"]).dt.date
     load_to_s3(symbols, "symbols", asset_category)
 
     # Load update
@@ -95,11 +94,9 @@ def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
         symbols_update = pd.read_parquet(
             TEST_DATA_DIR.joinpath(f"processed_{asset_category}_symbols_update.parquet")
         )
-        symbols_update["date_stamp"] = pd.to_datetime(
-            symbols_update["date_stamp"]
-        ).dt.date
     else:
         symbols_update = symbols.copy()
+
     load_to_s3(symbols_update, "symbols", asset_category)
 
     # Verify
@@ -111,14 +108,9 @@ def test_update_symbols_data_on_s3(asset_category, remove_s3_objects):
         else symbols.sort_values("symbol").reset_index(drop=True)
     )
 
-    loaded_symbols = pd.read_parquet(
-        f"{DATA_PATH}/symbols/{asset_category}.parquet",
-        storage_options={
-            "key": AWS_ACCESS_KEY,
-            "secret": AWS_SECRET_KEY,
-            "endpoint_url": S3_ENDPOINT,
-        },
-    )
+    loaded_symbols = DeltaTable(
+        f"{DATA_PATH}/symbols/{asset_category}", storage_options=storage_options
+    ).to_pandas()
 
     assert_loaded_data_matches_expected(loaded_symbols, expected_data)
 
@@ -177,14 +169,9 @@ def test_load_price_data_to_s3(asset_category, remove_s3_objects):
 
     load_to_s3(price_df, "price_history", asset_category)
 
-    loaded_price_df = pd.read_parquet(
-        f"{DATA_PATH}/price_history/{asset_category}.parquet",
-        storage_options={
-            "key": AWS_ACCESS_KEY,
-            "secret": AWS_SECRET_KEY,
-            "endpoint_url": S3_ENDPOINT,
-        },
-    )
+    loaded_price_df = DeltaTable(
+        f"{DATA_PATH}/price_history/{asset_category}", storage_options=storage_options
+    ).to_pandas()
 
     assert_loaded_data_matches_expected(loaded_price_df, price_df)
 
@@ -222,7 +209,6 @@ def test_update_price_on_s3(asset_category, remove_s3_objects):
     price_update = pd.read_parquet(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices_update.parquet")
     )
-    price_update["date"] = pd.to_datetime(price_update["date"]).dt.date
     load_to_s3(price_update, "price_history", asset_category)
 
     # Verify merged data
@@ -232,14 +218,9 @@ def test_update_price_on_s3(asset_category, remove_s3_objects):
         .reset_index(drop=True)
     )
 
-    loaded_price_df = pd.read_parquet(
-        f"{DATA_PATH}/price_history/{asset_category}.parquet",
-        storage_options={
-            "key": AWS_ACCESS_KEY,
-            "secret": AWS_SECRET_KEY,
-            "endpoint_url": S3_ENDPOINT,
-        },
-    )
+    loaded_price_df = DeltaTable(
+        f"{DATA_PATH}/price_history/{asset_category}", storage_options=storage_options
+    ).to_pandas()
 
     assert_loaded_data_matches_expected(loaded_price_df, expected_df)
 

@@ -1,7 +1,5 @@
-import duckdb
 import dlt
 import pandas as pd
-from fsspec import filesystem
 from prefect import task
 
 from py_pipeline.config import (
@@ -17,12 +15,8 @@ from py_pipeline.validate import (
     transformed_price_schema,
 )
 
-s3_storage_options = {
-    "key": AWS_ACCESS_KEY,
-    "secret": AWS_SECRET_KEY,
-    "endpoint_url": S3_ENDPOINT,
-}
-duckdb.register_filesystem(filesystem("s3", **s3_storage_options))
+dlt.config["load.delete_completed_jobs"] = True
+dlt.config["load.truncate_staging_dataset"] = True
 
 
 @task
@@ -32,35 +26,47 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     if dataset not in ["symbols", "price_history"]:
         raise ValueError(f"Unknown dataset, {asset_category}")
 
-    path = f"{DATA_PATH}/{dataset}/{asset_category}"
-    try:
-        if dataset == "symbols":
-            df = (
-                transformed_stock_symbols_schema(df, lazy=True)
-                if asset_category == "sp_stocks"
-                else transformed_fx_symbols_schema(df, lazy=True)
-            )
-            merged_data = duckdb.sql(
-                (
-                    f"""
-                    SELECT * 
-                    FROM '{path}.parquet' 
-                    UNION 
-                    SELECT * 
-                    FROM df 
-                    ORDER BY symbol{", date_stamp" if asset_category == "sp_stocks" else ""}
-                    """
-                )
-            )
-        else:
-            df = transformed_price_schema.validate(df, lazy=True)
-            merged_data = duckdb.sql(
-                f"SELECT * FROM '{path}.parquet' UNION SELECT * FROM df ORDER BY date, symbol"
-            )
-    except duckdb.IOException:
-        duckdb.sql(f"COPY df TO '{path}.parquet' (FORMAT PARQUET)")
+    write_disposition = "merge"
+
+    if dataset == "symbols":
+        primary_key = (
+            ["symbol", "date_stamp"] if asset_category == "sp_stocks" else ["symbol"]
+        )
+        if asset_category == "fx":
+            write_disposition = "replace"
+
+        df = (
+            transformed_stock_symbols_schema(df, lazy=True)
+            if asset_category == "sp_stocks"
+            else transformed_fx_symbols_schema(df, lazy=True)
+        )
     else:
-        duckdb.sql(f"COPY merged_data TO '{path}.parquet' (FORMAT PARQUET)")
+        # For price_history
+        primary_key = ["date", "symbol"]
+        df = transformed_price_schema.validate(df, lazy=True)
+
+    pipeline = dlt.pipeline(
+        pipeline_name=f"sec_s3_loader_{asset_category}",
+        destination=dlt.destinations.filesystem(
+            bucket_url=DATA_PATH,
+            credentials={
+                "aws_access_key_id": AWS_ACCESS_KEY,
+                "aws_secret_access_key": AWS_SECRET_KEY,
+                "endpoint_url": S3_ENDPOINT,
+            },
+        ),
+        dataset_name=dataset,
+    )
+
+    load_info = pipeline.run(
+        df,
+        table_name=asset_category,
+        write_disposition=write_disposition,
+        primary_key=primary_key,
+        table_format="delta",
+    )
+
+    print(load_info)
 
 
 @task
@@ -75,7 +81,7 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     engine = DB_ENGINE
     table_name = f"{dataset}_{asset_category}"
     write_disposition = "merge"
-    
+
     if dataset == "symbols":
         primary_key = (
             ["symbol", "date_stamp"] if asset_category == "sp_stocks" else ["symbol"]
@@ -86,9 +92,6 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
         # For price_history
         primary_key = ["date", "symbol"]
 
-    dlt.config["load.delete_completed_jobs"] = True
-    dlt.config["load.truncate_staging_dataset"] = True
-
     pipeline = dlt.pipeline(
         pipeline_name=f"sec_dw_loader_{asset_category}",
         destination=dlt.destinations.postgres(
@@ -96,7 +99,7 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
         ),
         dataset_name="public",
     )
-    
+
     load_info = pipeline.run(
         df,
         table_name=table_name,

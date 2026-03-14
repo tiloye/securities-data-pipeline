@@ -1,7 +1,9 @@
+from pydantic_settings.sources import ENV_FILE_SENTINEL
 import datetime as dt
 
 import pandas as pd
 import yfinance as yf
+from deltalake import DeltaTable
 from prefect import task
 
 from py_pipeline.config import (
@@ -24,14 +26,16 @@ def _get_data_from_s3(
 ) -> pd.DataFrame:
     """Helper to centralize S3 storage options and parquet reading."""
     s3_storage_options = {
-        "key": AWS_ACCESS_KEY,
-        "secret": AWS_SECRET_KEY,
-        "endpoint_url": S3_ENDPOINT,
+        "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY,
+        "AWS_SECRET_ACCESS_KEY": AWS_SECRET_KEY,
+        "AWS_ENDPOINT_URL": S3_ENDPOINT,
     }
-    path = f"{DATA_PATH}/{data_set}/{asset_category}.parquet"
+    if ENV_NAME == "dev":
+        s3_storage_options["AWS_ALLOW_HTTP"] = "true"
+    path = f"{DATA_PATH}/{data_set}/{asset_category}"
 
-    return pd.read_parquet(
-        path, storage_options=s3_storage_options, filters=filters, columns=columns
+    return DeltaTable(path, storage_options=s3_storage_options).to_pandas(
+        filters=filters
     )
 
 
@@ -93,9 +97,7 @@ def get_symbols_from_s3(
             ("date_stamp", "<=", pd.Timestamp(end).date()),
         ]
 
-    df = _get_data_from_s3(
-        asset_category, "symbols", filters=filters, columns=columns
-    )
+    df = _get_data_from_s3(asset_category, "symbols", filters=filters, columns=columns)
 
     return df["symbol"].unique().tolist() if symbols_only else df
 
@@ -130,7 +132,7 @@ def get_prices_from_s3(
     end: dt.date | str | None = None,
 ) -> pd.DataFrame:
     """Extract historical price data from the object store."""
-    
+
     filters = None
     if start and end:
         filters = [
