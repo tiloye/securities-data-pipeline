@@ -108,30 +108,3 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     )
 
     print(load_info)
-
-    # if dataset == "symbols":
-    #     lookup_cols = (
-    #         ["symbol", "date_stamp"] if asset_category == "sp_stocks" else ["symbol"]
-    #     )
-    # else:
-    #     lookup_cols = ["date", "symbol"]
-
-    # try:
-    #     existing_data_symbols_df = pd.read_sql(
-    #         f"""
-    #         SELECT {",".join(lookup_cols)}
-    #         FROM {table_name}
-    #         """,
-    #         con=engine,
-    #     )
-    # except pd.errors.DatabaseError:
-    #     df.to_sql(table_name, index=False, con=engine, if_exists="append")
-    # else:
-    #     if dataset == "symbols" and asset_category == "fx":
-    #         df.to_sql(table_name, index=False, con=engine, if_exists="replace")
-    #     else:
-    #         mask = ~df.set_index(lookup_cols).index.isin(
-    #             existing_data_symbols_df.set_index(lookup_cols).index
-    #         )
-    #         df = df[mask]
-    #         df.to_sql(table_name, index=False, con=engine, if_exists="append")
