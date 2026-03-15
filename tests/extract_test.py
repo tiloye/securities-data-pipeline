@@ -174,7 +174,7 @@ def test_log_failed_downloads(monkeypatch, asset_category, symbols):
     monkeypatch.setattr(
         yf,
         "download",
-        lambda symbols, start, end, group_by, auto_adjust: None,
+        lambda symbols, start, end, auto_adjust: None,
     )  # Avoid sending request to Yahoo Finance
     monkeypatch.setitem(yf.shared._ERRORS, symbols[0], "Error message")
     monkeypatch.setitem(yf.shared._ERRORS, symbols[1], "Error message")

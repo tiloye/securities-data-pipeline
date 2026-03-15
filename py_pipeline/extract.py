@@ -112,9 +112,7 @@ def get_prices_from_source(
     start: str | dt.date | None = None,
     end_date: str | dt.date | None = None,
 ) -> pd.DataFrame:
-    bars = yf.download(
-        symbols, start=start, end=end_date, group_by="ticker", auto_adjust=True
-    )
+    bars = yf.download(symbols, start=start, end=end_date, auto_adjust=True)
     return bars
 
 
