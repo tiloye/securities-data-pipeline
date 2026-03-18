@@ -13,7 +13,7 @@ The pipeline gathers and stores data for major forex currency pairs and stocks t
 
 # Tools Used
 * **yfinance**: for extracting stocks and fx price data from Yahoo Finance.
-* **DuckDB**: for extracting and loading data into an S3 bucket.
+* **dlt**: for loading data into the S3 data lake and Postgres data warehouse.
 * **MinIO**: for storing extracted and transformed data in a local S3 bucket.
 * **Postgres**: for storing the data in a local data warehouse.
 * **dbt**: for transforming and modelling the data in the data warehouse
