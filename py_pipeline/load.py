@@ -19,7 +19,7 @@ dlt.config["load.delete_completed_jobs"] = True
 dlt.config["load.truncate_staging_dataset"] = True
 
 
-@task
+@task(log_prints=True)
 def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     """Load price or symbols data into an S3 bucket."""
 
@@ -46,7 +46,7 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
         df = transformed_price_schema.validate(df, lazy=True)
 
     pipeline = dlt.pipeline(
-        pipeline_name=f"sec_s3_loader_{asset_category}",
+        pipeline_name=f"sec_s3_loader_{dataset}_{asset_category}",
         destination=dlt.destinations.filesystem(
             bucket_url=DATA_PATH,
             credentials={
@@ -93,7 +93,7 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
         primary_key = ["date", "symbol"]
 
     pipeline = dlt.pipeline(
-        pipeline_name=f"sec_dw_loader_{asset_category}",
+        pipeline_name=f"sec_dw_loader_{dataset}_{asset_category}",
         destination=dlt.destinations.postgres(
             engine.url.render_as_string(hide_password=False)
         ),
