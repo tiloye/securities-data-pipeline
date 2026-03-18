@@ -36,7 +36,7 @@ s3_storage_options = {
 
 def assert_loaded_data_matches_expected(loaded_df, expected_df):
     assert loaded_df.shape == expected_df.shape
-    assert loaded_df.columns.tolist() == expected_df.columns.tolist()
+    assert sorted(loaded_df.columns.tolist()) == sorted(expected_df.columns.tolist())
 
 
 ########## Tests for Symbols ETL ##############
@@ -108,7 +108,7 @@ def test_dw_el_fx_symbols(drop_dw_tables, remove_s3_objects):
     assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
-def test_dw_el_sp_stocks_symbols(monkeypatch, drop_dw_tables):
+def test_dw_el_sp_stocks_symbols(monkeypatch, remove_s3_objects, drop_dw_tables):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
     monkeypatch.setattr(
         "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df

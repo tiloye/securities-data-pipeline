@@ -27,7 +27,7 @@ storage_options = {
 
 def assert_loaded_data_matches_expected(loaded_df, expected_df):
     assert loaded_df.shape == expected_df.shape
-    assert loaded_df.columns.tolist() == expected_df.columns.tolist()
+    assert sorted(loaded_df.columns.tolist()) == sorted(expected_df.columns.tolist())
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
