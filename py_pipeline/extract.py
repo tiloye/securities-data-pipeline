@@ -34,7 +34,7 @@ def _get_data_from_s3(
     path = f"{DATA_PATH}/{data_set}/{asset_category}"
 
     return DeltaTable(path, storage_options=s3_storage_options).to_pandas(
-        filters=filters
+        columns=columns, filters=filters
     )
 
 
