@@ -1,20 +1,30 @@
 import datetime as dt
 import pandas as pd
-from prefect import task
 from py_pipeline.validate import (
     raw_stock_symbols_schema,
     raw_fx_symbols_schema,
     raw_price_schema,
 )
 
-######## Symbol data transformers ########
+
+def transform(
+    df: pd.DataFrame,
+    dataset: str,
+    asset_category: str,
+) -> pd.DataFrame:
+    if dataset == "symbols":
+        if asset_category == "sp_stocks":
+            return transform_stocks_symbol_df(df)
+        elif asset_category == "fx":
+            return transform_fx_symbol_df(df)
+        else:
+            raise ValueError(f"Unknown asset category: {asset_category}")
+    elif dataset == "price_history":
+        return transform_price_df(df, asset_category)
+    else:
+        raise ValueError(f"Unknown dataset: {dataset}")
 
 
-def date_stamp():
-    return dt.datetime.now().date()
-
-
-@task
 def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
     df = raw_stock_symbols_schema.validate(df, lazy=True).reset_index(drop=True)
     df.columns = df.columns.str.lower()
@@ -50,16 +60,16 @@ def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
     return df[cols]
 
 
+def date_stamp():
+    return dt.datetime.now().date()
+
+
 def transform_fx_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
     df = raw_fx_symbols_schema.validate(df, lazy=True)
     df.columns = df.columns.str.lower()
     return df
 
 
-######### Price data transformers #########
-
-
-@task
 def transform_price_df(df: pd.DataFrame, asset_category: str) -> pd.DataFrame:
     if df.empty:
         return df

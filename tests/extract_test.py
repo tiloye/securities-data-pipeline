@@ -123,8 +123,8 @@ def test_get_sp_symbols_from_s3_by_date():
     price_df = get_symbols_from_s3(
         asset_category,
         symbols_only=False,
-        start=start_date,
-        end=end_date,
+        start_date=start_date,
+        end_date=end_date,
     ).reset_index(drop=True)
 
     pd.testing.assert_frame_equal(price_df, expected_data)
@@ -155,8 +155,8 @@ def test_get_prices_from_s3_by_date(asset_category):
 
     price_df = get_prices_from_s3(
         asset_category,
-        start=start_date,
-        end=end_date,
+        start_date=start_date,
+        end_date=end_date,
     ).reset_index(drop=True)
 
     assert price_df.shape == expected_data.shape

@@ -1,6 +1,5 @@
 import pytest
 from minio import Minio
-from prefect.testing.utilities import prefect_test_harness
 from sqlalchemy import text
 
 from py_pipeline.config import (
@@ -10,13 +9,6 @@ from py_pipeline.config import (
     DB_ENGINE,
     S3_ENDPOINT,
 )
-
-
-@pytest.fixture(autouse=True, scope="session")
-def prefect_test_fixture():
-    with prefect_test_harness():
-        yield
-
 
 engine = DB_ENGINE
 client = Minio(

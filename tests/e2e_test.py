@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from deltalake import DeltaTable
+from prefect.testing.utilities import prefect_test_harness
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
@@ -12,15 +13,24 @@ from py_pipeline.config import (
     DB_ENGINE,
 )
 from py_pipeline.extract import YF_ERRORS
-from py_pipeline.main import (
-    etl_bars_to_s3,
-    etl_fx_symbols_to_s3,
-    etl_sp_stocks_symbols_to_s3,
-    el_symbols_to_dw,
-    el_bars_to_dw,
+from py_pipeline.orchestration import (
+    etl_price_history_source_to_s3,
+    etl_symbols_source_to_s3,
+    el_symbols_s3_to_dw,
+    el_price_history_s3_to_dw,
 )
 
-FX_SYMBOLS = ["EURUSD=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "JPY=X", "CHF=X", "CAD=X"]
+FX_SYMBOLS = [
+    "EURUSD=X",
+    "GBPUSD=X",
+    "INVALID_SYMBOL_1",
+    "AUDUSD=X",
+    "NZDUSD=X",
+    "JPY=X",
+    "CHF=X",
+    "CAD=X",
+    "INVALID_SYMBOL_2",
+]
 SP_SYMBOLS = ["AAPL", "INVALID_SYMBOL_1", "MSFT", "BRK-A", "BRK-B", "INVALID_SYMBOL_2"]
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
@@ -39,6 +49,12 @@ def assert_loaded_data_matches_expected(loaded_df, expected_df):
     assert sorted(loaded_df.columns.tolist()) == sorted(expected_df.columns.tolist())
 
 
+@pytest.fixture(autouse=True, scope="module")
+def prefect_test_fixture():
+    with prefect_test_harness():
+        yield
+
+
 ########## Tests for Symbols ETL ##############
 
 
@@ -49,7 +65,7 @@ def test_s3_etl_fx_symbols(remove_s3_objects):
         .reset_index(drop=True)
     )
 
-    etl_fx_symbols_to_s3()
+    etl_symbols_source_to_s3("fx")
     loaded_data = (
         DeltaTable(f"{DATA_PATH}/symbols/fx", storage_options=s3_storage_options)
         .to_pandas()
@@ -63,13 +79,13 @@ def test_s3_etl_fx_symbols(remove_s3_objects):
 def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
     monkeypatch.setattr(
-        "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
+        "py_pipeline.extract.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     monkeypatch.setattr(
         "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
     )
 
-    etl_sp_stocks_symbols_to_s3()
+    etl_symbols_source_to_s3("sp_stocks")
     loaded_data = (
         DeltaTable(f"{DATA_PATH}/symbols/sp_stocks", storage_options=s3_storage_options)
         .to_pandas()
@@ -90,9 +106,9 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
 
 
 def test_dw_el_fx_symbols(drop_dw_tables, remove_s3_objects):
-    etl_fx_symbols_to_s3()
+    etl_symbols_source_to_s3("fx")
 
-    el_symbols_to_dw("fx")
+    el_symbols_s3_to_dw("fx")
 
     loaded_data = (
         pd.read_sql_table("symbols_fx", con=engine)
@@ -111,14 +127,14 @@ def test_dw_el_fx_symbols(drop_dw_tables, remove_s3_objects):
 def test_dw_el_sp_stocks_symbols(monkeypatch, remove_s3_objects, drop_dw_tables):
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
     monkeypatch.setattr(
-        "py_pipeline.main.get_sp_stock_symbols_from_source", lambda: symbols_df
+        "py_pipeline.extract.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
     monkeypatch.setattr(
         "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
     )
-    etl_sp_stocks_symbols_to_s3()
+    etl_symbols_source_to_s3("sp_stocks")
 
-    el_symbols_to_dw("sp_stocks")
+    el_symbols_s3_to_dw("sp_stocks")
 
     loaded_data = (
         pd.read_sql_table("symbols_sp_stocks", con=engine)
@@ -140,13 +156,24 @@ def test_dw_el_sp_stocks_symbols(monkeypatch, remove_s3_objects, drop_dw_tables)
 ########## Tests for Price History ETL ##############
 @pytest.fixture
 def price_data():
-    def _price_data(asset_category, symbols=None, start=None, end=None):
+    def _price_data(
+        asset_category, symbols=None, start=None, end=None, drop_invalid=True
+    ):
         data = pd.read_csv(
             TEST_DATA_DIR.joinpath(f"raw_{asset_category}_prices.csv"),
             header=[0, 1],
             index_col=[0],
             parse_dates=True,
         )
+        if drop_invalid:
+            data = data.drop(
+                columns=pd.MultiIndex.from_product(
+                    (
+                        ["Open", "High", "Low", "Close", "Adj Close", "Volume"],
+                        ["INVALID_SYMBOL_1", "INVALID_SYMBOL_2"],
+                    )
+                )
+            )
         if start and end:
             data = data.loc[start:end]
         return data.loc[:, pd.IndexSlice[:, symbols]] if symbols else data
@@ -157,41 +184,56 @@ def price_data():
 @pytest.mark.usefixtures("remove_s3_objects")
 class TestETLBars:
     def _etl_bars_to_s3(
-        self, monkeypatch, price_data, asset_category, start=None, end=None
+        self,
+        monkeypatch,
+        price_data,
+        asset_category,
+        start=None,
+        end=None,
+        drop_invalid=True,
     ):
         symbols = FX_SYMBOLS if asset_category == "fx" else SP_SYMBOLS
 
         monkeypatch.setattr(
             "py_pipeline.extract.yf.download",
-            lambda *args, **kwargs: price_data(asset_category, start=start, end=end),
+            lambda *args, **kwargs: price_data(
+                asset_category, start=start, end=end, drop_invalid=drop_invalid
+            ),
         )
-        if asset_category == "sp_stocks":
+        if not drop_invalid:
             monkeypatch.setitem(
-                YF_ERRORS, "sp_stocks", ["INVALID_SYMBOL_1", "INVALID_SYMBOL_2"]
+                YF_ERRORS, asset_category, ["INVALID_SYMBOL_1", "INVALID_SYMBOL_2"]
             )
 
-        etl_bars_to_s3(asset_category, symbols, start, end)
-
-    @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
-    def test_s3_etl_bars(self, monkeypatch, price_data, asset_category):
-        self._etl_bars_to_s3(monkeypatch, price_data, asset_category)
-
-        expected_data = pd.read_parquet(
-            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
+        etl_price_history_source_to_s3(
+            asset_category, symbols, start, end, chunk_size=500
         )
 
-        loaded_data = DeltaTable(
-            f"{DATA_PATH}/price_history/{asset_category}",
-            storage_options=s3_storage_options,
-        ).to_pandas()
+    @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
+    def test_s3_etl_bars(self, monkeypatch, price_data, asset_category, subtests):
+        with subtests.test(msg="ETL raises error when there are unknown symbols"):
+            with pytest.raises(RuntimeError):
+                self._etl_bars_to_s3(
+                    monkeypatch, price_data, asset_category, drop_invalid=False
+                )
 
-        assert_loaded_data_matches_expected(loaded_data, expected_data)
+        with subtests.test(msg="ETL loads known symbols to S3"):
+            expected_data = pd.read_parquet(
+                TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
+            )
+
+            loaded_data = DeltaTable(
+                f"{DATA_PATH}/price_history/{asset_category}",
+                storage_options=s3_storage_options,
+            ).to_pandas()
+
+            assert_loaded_data_matches_expected(loaded_data, expected_data)
 
     @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
     def test_dw_el_bars(self, monkeypatch, price_data, asset_category, drop_dw_tables):
         self._etl_bars_to_s3(monkeypatch, price_data, asset_category)
 
-        el_bars_to_dw(asset_category)
+        el_price_history_s3_to_dw(asset_category, start_date=None, end_date=None)
 
         loaded_data = pd.read_sql_table(f"price_history_{asset_category}", con=engine)
         expected_data = pd.read_parquet(
@@ -215,7 +257,7 @@ class TestETLBars:
             start=start,
             end=end,
         )
-        el_bars_to_dw(asset_category)
+        el_price_history_s3_to_dw(asset_category, start_date=start, end_date=end)
 
         # Second ETL run to update data
         start = "2000-01-07"
@@ -228,7 +270,7 @@ class TestETLBars:
             start=start,
             end=end,
         )
-        el_bars_to_dw(asset_category, start, end)
+        el_price_history_s3_to_dw(asset_category, start_date=start, end_date=end)
 
         loaded_s3_data = DeltaTable(
             f"{DATA_PATH}/price_history/{asset_category}",
@@ -250,36 +292,44 @@ class TestETLBars:
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
 def test_s3_etl_bars_in_chunk(
-    monkeypatch, price_data, asset_category, remove_s3_objects
+    monkeypatch, price_data, asset_category, subtests, remove_s3_objects
 ):
     monkeypatch.setattr(
         "py_pipeline.extract.yf.download",
-        lambda *args, **kwargs: price_data(asset_category, args[0]),
+        lambda *args, **kwargs: price_data(asset_category, *args, drop_invalid=False),
     )
-    if asset_category == "sp_stocks":
-        monkeypatch.setitem(
-            YF_ERRORS, "sp_stocks", ["INVALID_SYMBOL_1", "INVALID_SYMBOL_2"]
-        )
+    monkeypatch.setitem(
+        YF_ERRORS,
+        asset_category,
+        ["INVALID_SYMBOL_1", "INVALID_SYMBOL_2"],
+    )
 
     symbols = FX_SYMBOLS if asset_category == "fx" else SP_SYMBOLS
-    etl_bars_to_s3(asset_category, symbols, "2000-01-01", "2000-01-05", chunk_size=2)
+    with subtests.test(msg="ETL in chunks raises error when there are unknown symbols"):
+        with pytest.raises(RuntimeError):
+            etl_price_history_source_to_s3(
+                asset_category, symbols, "2000-01-01", "2000-01-05", chunk_size=2
+            )
 
-    loaded_data = (
-        DeltaTable(
-            f"{DATA_PATH}/price_history/{asset_category}",
-            storage_options=s3_storage_options,
+    with subtests.test(
+        msg="Check that loading ETL in chunks loads known symbols to S3"
+    ):
+        loaded_data = (
+            DeltaTable(
+                f"{DATA_PATH}/price_history/{asset_category}",
+                storage_options=s3_storage_options,
+            )
+            .to_pandas()
+            .sort_values(["date", "symbol"])
+            .reset_index(drop=True)
         )
-        .to_pandas()
-        .sort_values(["date", "symbol"])
-        .reset_index(drop=True)
-    )
-    expected_data = pd.read_parquet(
-        TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
-    )
-    expected_data.sort_values(["date", "symbol"], inplace=True)
-    expected_data.reset_index(drop=True, inplace=True)
+        expected_data = pd.read_parquet(
+            TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
+        )
+        expected_data.sort_values(["date", "symbol"], inplace=True)
+        expected_data.reset_index(drop=True, inplace=True)
 
-    assert_loaded_data_matches_expected(loaded_data, expected_data)
+        assert_loaded_data_matches_expected(loaded_data, expected_data)
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
@@ -289,13 +339,16 @@ def test_s3_etl_bars_raises_exception(monkeypatch, asset_category):
     returns emtpy data frame.
     """
 
+    symbols = ["PLACE_HOLDER"]
     monkeypatch.setattr(
         "py_pipeline.extract.yf.download", lambda *args, **kwargs: pd.DataFrame()
     )
+    monkeypatch.setitem(YF_ERRORS, asset_category, symbols)
 
-    with pytest.raises(ValueError):
-        symbols = ["PLACE_HOLDER"]
-        etl_bars_to_s3(asset_category, symbols, "2000-01-01", "2000-01-05")
+    with pytest.raises(RuntimeError):
+        etl_price_history_source_to_s3(
+            asset_category, symbols, "2000-01-01", "2000-01-05", chunk_size=500
+        )
 
 
 @pytest.mark.parametrize("asset_category", ("fx", "sp_stocks"))
@@ -315,8 +368,8 @@ def test_s3_etl_bars_in_chunk_raises_exception(monkeypatch, asset_category):
     )
     monkeypatch.setitem(YF_ERRORS, asset_category, symbols)
 
-    with pytest.raises(ValueError):
-        etl_bars_to_s3(
+    with pytest.raises(RuntimeError):
+        etl_price_history_source_to_s3(
             asset_category, symbols, "2000-01-01", "2000-01-05", chunk_size=2
         )
 

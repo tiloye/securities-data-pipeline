@@ -1,6 +1,5 @@
 import dlt
 import pandas as pd
-from prefect import task
 
 from py_pipeline.config import (
     DATA_PATH,
@@ -19,7 +18,20 @@ dlt.config["load.delete_completed_jobs"] = True
 dlt.config["load.truncate_staging_dataset"] = True
 
 
-@task(log_prints=True)
+def load(
+    df: pd.DataFrame,
+    dataset: str,
+    asset_category: str,
+    destination: str = "s3",
+) -> None:
+    if destination == "s3":
+        return load_to_s3(df, dataset, asset_category)
+    elif destination == "dw":
+        return load_to_dw(df, dataset, asset_category)
+    else:
+        raise ValueError(f"Unknown destination: {destination}")
+
+
 def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     """Load price or symbols data into an S3 bucket."""
 
@@ -69,7 +81,6 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     print(load_info)
 
 
-@task
 def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     """
     Load price or symbols data into data warehouse.

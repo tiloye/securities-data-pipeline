@@ -4,15 +4,19 @@ from prefect import deploy
 from prefect.events import DeploymentCompoundTrigger, EventTrigger
 from prefect.runner.storage import LocalStorage
 
-from py_pipeline.main import dbt_runner, main_fx, main_sp_stocks
+from py_pipeline.orchestration import dbt_runner, etl_flow
 
 if __name__ == "__main__":
     schedule = "0 0 * * 2-6"
-    fx_flow_deployment = main_fx.to_deployment("fx-data-pipeline", cron=schedule)
+    fx_flow_deployment = etl_flow.to_deployment(
+        "fx-data-pipeline", parameters={"asset_category": "fx"}, cron=schedule
+    )
     fx_flow_deployment.storage = LocalStorage(path="/app")
 
-    sp_stocks_flow_deployment = main_sp_stocks.to_deployment(
-        "sp-stocks-data-pipeline", cron=schedule
+    sp_stocks_flow_deployment = etl_flow.to_deployment(
+        "sp-stocks-data-pipeline",
+        parameters={"asset_category": "sp_stocks"},
+        cron=schedule,
     )
     sp_stocks_flow_deployment.storage = LocalStorage(path="/app")
 
