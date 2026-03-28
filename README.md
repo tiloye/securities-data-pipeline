@@ -48,22 +48,18 @@ Ensure you have Docker installed on your system. The following steps were tested
 
     PREFECT_API_URL=http://127.0.0.1:4201/api
     ```
-4. Create an AwsCredentials and SQLAlchemyConnector block with the following values, using the prefect UI (localhost:4201):
+4. Configure Prefect Blocks:
+    Navigate to the Prefect UI (`http://localhost:4201`) and create the following connection blocks:
 
-    * **AwsCredentials** block:
-        - Block Name: sec-datalake-credentials
-        - AWS Access Key ID: minioadmin (or your S3 access key)
-        - AWS Access Key Secret: minioadmin (or your S3 secret key)
+    - **AwsCredentials** block:
+        - **Block Name:** `sec-datalake-credentials`
+        - **AWS Access Key ID:** `minioadmin` (or your specific S3 access key)
+        - **AWS Access Key Secret:** `minioadmin` (or your specific S3 secret key)
 
-    * **SQLAlchemyConnector** block:
-        - Block Name: sec-dw-connector
-        
-        Under "Connection Info", choose "ConnectionComponents" and fill in your database credentials:
-        - Host: localhost
-        - Port: 5433
-        - Database: securities_db
-        - Username: postgres
-        - Password: postgres
+    - **SQLAlchemyConnector** block:
+        - **Block Name:** `sec-dw-connector`
+        - **Connection Info:** Select **URI** and enter your SQLAlchemy connection string:
+            - **URL:** `postgresql://postgres:postgres@localhost:5433/securities_db`
     
     Ensure these credentials match your production (local) datalake and warehouse credentials.
 
