@@ -110,9 +110,8 @@ def _get_data_from_s3(
         "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY,
         "AWS_SECRET_ACCESS_KEY": AWS_SECRET_KEY,
         "AWS_ENDPOINT_URL": S3_ENDPOINT,
+        "AWS_ALLOW_HTTP": "true",
     }
-    if ENV_NAME == "dev":
-        s3_storage_options["AWS_ALLOW_HTTP"] = "true"
     path = f"{DATA_PATH}/{data_set}/{asset_category}"
 
     return DeltaTable(path, storage_options=s3_storage_options).to_pandas(
