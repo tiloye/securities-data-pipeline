@@ -29,6 +29,29 @@ sources:
             description: "The industry of the S&P stock."
             data_tests:
               - not_null
+          - name: in_sp400
+            description: "Indicates if the symbol is in the S&P 400 index."
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [true, false]
+          - name: in_sp500
+            description: "Indicates if the symbol is in the S&P 500 index."
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [true, false]
+          - name: in_sp600
+            description: "Indicates if the symbol is in the S&P 600 index."
+            data_tests:
+              - not_null
+              - accepted_values:
+                  arguments:
+                    values: [true, false]
+          - name: date_stamp
+            description: "The date when the symbol data was last updated (Null for forex symbols)."
 
       - name: price_history_fx
         description: "Raw FX OHLC price history data from source system."
