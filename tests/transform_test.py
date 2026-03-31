@@ -83,7 +83,6 @@ def test_transform_price_df_returns_expected_df(asset_category):
     expected_df = pd.read_parquet(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
     )
-    expected_df["date"] = pd.to_datetime(expected_df["date"]).dt.date
     expected_df["volume"] = expected_df["volume"].astype("Int64")
 
     transformed_price_data = transform_price_df(price_data, asset_category)

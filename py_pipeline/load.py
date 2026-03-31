@@ -55,7 +55,7 @@ def load_to_s3(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
         )
     else:
         # For price_history
-        primary_key = ["date", "symbol"]
+        primary_key = ["date_stamp", "symbol"]
         df = transformed_price_schema.validate(df, lazy=True)
 
     pipeline = dlt.pipeline(
@@ -101,7 +101,7 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
             write_disposition = "replace"
     else:
         # For price_history
-        primary_key = ["date", "symbol"]
+        primary_key = ["date_stamp", "symbol"]
 
     pipeline = dlt.pipeline(
         pipeline_name=f"sec_dw_loader_{dataset}_{asset_category}",

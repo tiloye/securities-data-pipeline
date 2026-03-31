@@ -320,13 +320,13 @@ def test_s3_etl_bars_in_chunk(
                 storage_options=s3_storage_options,
             )
             .to_pandas()
-            .sort_values(["date", "symbol"])
+            .sort_values(["date_stamp", "symbol"])
             .reset_index(drop=True)
         )
         expected_data = pd.read_parquet(
             TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet"),
         )
-        expected_data.sort_values(["date", "symbol"], inplace=True)
+        expected_data.sort_values(["date_stamp", "symbol"], inplace=True)
         expected_data.reset_index(drop=True, inplace=True)
 
         assert_loaded_data_matches_expected(loaded_data, expected_data)

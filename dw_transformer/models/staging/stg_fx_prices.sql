@@ -1,6 +1,6 @@
 with base_ as (
     select
-    cast("date" as date) as date,
+    cast(date_stamp as date) as date_stamp,
     symbol,
     case
         when symbol = 'USDJPY' then round(cast(open as decimal), 3)
@@ -23,7 +23,7 @@ from {{ source("raw", "price_history_fx") }}
 ),
  ffill as (
     select
-        date,
+        date_stamp,
         symbol,
         {{ ffill_candles('symbol') }}
     from base_

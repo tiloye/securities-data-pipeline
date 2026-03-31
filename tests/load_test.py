@@ -155,7 +155,7 @@ def test_load_price_data_to_s3_raises_schema_error(asset_category):
     transformed_prices = pd.read_parquet(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
     )
-    transformed_prices.rename(columns={"date": "timestamp"}, inplace=True)
+    transformed_prices.rename(columns={"date_stamp": "timestamp"}, inplace=True)
 
     with pytest.raises(pa.errors.SchemaErrors):
         load_to_s3(transformed_prices, "price_history", asset_category)
@@ -182,7 +182,7 @@ def test_load_price_data_to_dw(asset_category, drop_dw_tables):
         pd.read_parquet(
             TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
         )
-        .sort_values(["date", "symbol"])
+        .sort_values(["date_stamp", "symbol"])
         .reset_index(drop=True)
     )
 
@@ -190,7 +190,7 @@ def test_load_price_data_to_dw(asset_category, drop_dw_tables):
 
     loaded_data = (
         pd.read_sql_table(f"price_history_{asset_category}", con=engine)
-        .sort_values(["date", "symbol"])
+        .sort_values(["date_stamp", "symbol"])
         .reset_index(drop=True)
     )
 
@@ -214,7 +214,7 @@ def test_update_price_on_s3(asset_category, remove_s3_objects):
     # Verify merged data
     expected_df = (
         pd.concat([hist_price_df, price_update], ignore_index=True)
-        .sort_values(["date", "symbol"])
+        .sort_values(["date_stamp", "symbol"])
         .reset_index(drop=True)
     )
 
@@ -245,13 +245,13 @@ def test_update_price_on_dw(asset_category, drop_dw_tables):
     # Verify merged data
     expected_df = (
         pd.concat([hist_price_df, price_update], ignore_index=True)
-        .sort_values(["date", "symbol"])
+        .sort_values(["date_stamp", "symbol"])
         .reset_index(drop=True)
     )
 
     loaded_price_df = (
         pd.read_sql_table(f"price_history_{asset_category}", con=engine)
-        .sort_values(["date", "symbol"])
+        .sort_values(["date_stamp", "symbol"])
         .reset_index(drop=True)
     )
 

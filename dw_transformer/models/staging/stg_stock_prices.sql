@@ -1,6 +1,6 @@
 with base_ as (
     select
-        cast("date" as date) as date,
+        cast(date_stamp as date) as date_stamp,
         symbol,
         round(cast(open as decimal), 2) as open,
         round(cast(high as decimal), 2) as high,
@@ -11,7 +11,7 @@ with base_ as (
 ),
  ffilled as (
     select
-        "date",
+        date_stamp,
         symbol,
         {{ ffill_candles('symbol') }}
     from base_

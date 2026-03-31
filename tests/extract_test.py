@@ -150,7 +150,7 @@ def test_get_prices_from_s3_by_date(asset_category):
     expected_data = pd.read_parquet(
         TEST_DATA_DIR.joinpath(f"processed_{asset_category}_prices.parquet")
     )
-    mask = (expected_data["date"] >= start_date) & (expected_data["date"] <= end_date)
+    mask = (expected_data["date_stamp"] >= start_date) & (expected_data["date_stamp"] <= end_date)
     expected_data = expected_data.loc[mask].reset_index(drop=True)
 
     price_df = get_prices_from_s3(

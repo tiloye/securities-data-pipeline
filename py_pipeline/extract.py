@@ -147,8 +147,8 @@ def get_prices_from_s3(
     filters = None
     if start_date and end_date:
         filters = [
-            ("date", ">=", pd.Timestamp(start_date).date()),
-            ("date", "<=", pd.Timestamp(end_date).date()),
+            ("date_stamp", ">=", pd.Timestamp(start_date).date()),
+            ("date_stamp", "<=", pd.Timestamp(end_date).date()),
         ]
 
     return _get_data_from_s3(asset_category, "price_history", filters=filters)

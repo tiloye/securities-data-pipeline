@@ -1,6 +1,6 @@
 (
     select
-    cast('2025-01-01' as date) as date,
+    cast('2025-01-01' as date) as date_stamp,
     'P1' as symbol,
     round(cast(1.10 as decimal), 5) as open,
     round(cast(1.12 as decimal), 5) as high,

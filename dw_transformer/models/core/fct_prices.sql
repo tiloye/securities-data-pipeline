@@ -1,6 +1,6 @@
 with prices as (
     select
-        "date",
+        date_stamp,
         symbol,
         open,
         high,
@@ -10,7 +10,7 @@ with prices as (
     from {{ ref('stg_fx_prices') }}
     union all
     select
-        "date",
+        date_stamp,
         symbol,
         open,
         high,

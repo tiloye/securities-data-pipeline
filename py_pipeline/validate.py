@@ -74,7 +74,7 @@ raw_price_schema = pa.DataFrameSchema(
 transformed_price_schema = pa.DataFrameSchema(
     name="Transformed prices",
     columns={
-        "date": pa.Column(date),
+        "date_stamp": pa.Column(date),
         "symbol": pa.Column(str),
         "close": pa.Column(float, nullable=True),
         "high": pa.Column(float, nullable=True),
