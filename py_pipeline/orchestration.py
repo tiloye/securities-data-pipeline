@@ -200,22 +200,47 @@ def etl_flow(
         )
 
 
-@task
+@task(log_prints=True)
 def create_dbt_profiles(project_dir: Path) -> None:
-    from py_pipeline.config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+    from py_pipeline.config import (
+        DB_HOST,
+        DB_PORT,
+        DB_USER,
+        DB_PASSWORD,
+        DB_NAME,
+        DB_TYPE,
+    )
 
-    profiles_content = f"""sec_dw_transformer:
-  outputs:
-    dev:
-      type: postgres
-      dbname: {DB_NAME}
-      user: {DB_USER}
-      pass: {DB_PASSWORD}
-      host: {DB_HOST}
-      port: {DB_PORT}
-      schema: public
-      threads: 1
-  target: dev"""
+    print(f"Creating profiles.yml for {DB_TYPE}")
+
+    if DB_TYPE == "postgres":
+        profiles_content = f"""sec_dw_transformer:
+    outputs:
+        dev:
+            type: {DB_TYPE}
+            dbname: {DB_NAME}
+            user: {DB_USER}
+            pass: {DB_PASSWORD}
+            host: {DB_HOST}
+            port: {DB_PORT}
+            schema: public
+            threads: 1
+    target: dev"""
+    elif DB_TYPE == "snowflake":
+        profiles_content = f"""sec_dw_transformer:
+    outputs:
+        dev:
+            type: {DB_TYPE}
+            account: {DB_HOST}
+            user: {DB_USER}
+            password: {DB_PASSWORD}
+            database: {DB_NAME}
+            schema: public
+            warehouse: "COMPUTE_WH"
+            threads: 1
+    target: dev"""
+    else:
+        raise ValueError(f"Unknown database type: {DB_TYPE}")
 
     profiles_path = project_dir / "profiles.yml"
     with open(profiles_path, "w") as f:
@@ -224,8 +249,10 @@ def create_dbt_profiles(project_dir: Path) -> None:
     print(f"Created/updated profiles.yml at {profiles_path}")
 
 
-@flow
+@flow(log_prints=True)
 def dbt_runner() -> None:
+    print("Running dbt")
+
     dbt_project_path = Path(__file__).parent.parent / "dw_transformer"
     create_dbt_profiles(dbt_project_path)
     settings = PrefectDbtSettings(
@@ -244,3 +271,4 @@ if __name__ == "__main__":
 
     etl_flow(asset_category="fx", start_date=start_date, end_date=end_date)
     etl_flow(asset_category="sp_stocks", start_date=start_date, end_date=end_date)
+    dbt_runner()

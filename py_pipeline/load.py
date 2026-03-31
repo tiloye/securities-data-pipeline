@@ -7,6 +7,7 @@ from py_pipeline.config import (
     AWS_SECRET_KEY,
     S3_ENDPOINT,
     DB_ENGINE,
+    DB_TYPE,
 )
 from py_pipeline.validate import (
     transformed_stock_symbols_schema,
@@ -89,7 +90,6 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     if dataset not in ["symbols", "price_history"]:
         raise ValueError(f"Unknown dataset, {asset_category}")
 
-    engine = DB_ENGINE
     table_name = f"{dataset}_{asset_category}"
     write_disposition = "merge"
 
@@ -105,9 +105,7 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
 
     pipeline = dlt.pipeline(
         pipeline_name=f"sec_dw_loader_{dataset}_{asset_category}",
-        destination=dlt.destinations.postgres(
-            engine.url.render_as_string(hide_password=False)
-        ),
+        destination=get_dw_destination(),
         dataset_name="public",
     )
 
@@ -119,3 +117,17 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
     )
 
     print(load_info)
+
+
+def get_dw_destination():
+    if DB_TYPE == "postgres":
+        return dlt.destinations.postgres(
+            DB_ENGINE.url.render_as_string(hide_password=False)
+        )
+    elif DB_TYPE == "snowflake":
+        return dlt.destinations.snowflake(
+            credentials=DB_ENGINE.url.render_as_string(hide_password=False),
+            keep_staged_files=False,
+        )
+    else:
+        raise ValueError(f"Unknown database type: {DB_TYPE}")

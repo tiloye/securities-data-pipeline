@@ -34,6 +34,7 @@ DATA_PATH = f"s3://{BUCKET_NAME}"
 # Load database connection
 dw_connection = SqlAlchemyConnector.load(PREFECT_DW_CONNECTOR_BLOCK)
 DB_ENGINE = dw_connection.get_engine()
+DB_TYPE = os.environ["DB_TYPE"]
 DB_HOST = DB_ENGINE.url.host
 DB_PORT = DB_ENGINE.url.port
 DB_USER = DB_ENGINE.url.username
