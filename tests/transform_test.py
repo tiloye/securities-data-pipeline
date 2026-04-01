@@ -24,7 +24,9 @@ def test_transform_symbols_raises_schema_error(asset_category):
         if asset_category == "fx":
             transform_fx_symbol_df(source_symbol)
         else:
-            transform_stocks_symbol_df(source_symbol)
+            transform_stocks_symbol_df(
+                source_symbol, date_stamp=pd.Timestamp("2000-01-03").date()
+            )
 
 
 def test_transform_stocks_symbol_df(monkeypatch):
@@ -36,12 +38,9 @@ def test_transform_stocks_symbol_df(monkeypatch):
         .sort_values("symbol")
         .reset_index(drop=True)
     )
-    monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
-    )
-
+    date_stamp = pd.Timestamp("2000-01-03").date()
     symbols_df = pd.read_csv(TEST_DATA_DIR.joinpath("raw_sp_stocks_symbols.csv"))
-    transformed_data = transform_stocks_symbol_df(symbols_df)
+    transformed_data = transform_stocks_symbol_df(symbols_df, date_stamp)
 
     # Sort dataframe by symbol to ensure it has the same order with expected dataframe
     transformed_data = transformed_data.sort_values("symbol").reset_index(drop=True)

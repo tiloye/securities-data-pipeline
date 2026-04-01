@@ -11,10 +11,11 @@ def transform(
     df: pd.DataFrame,
     dataset: str,
     asset_category: str,
+    **kwargs,
 ) -> pd.DataFrame:
     if dataset == "symbols":
         if asset_category == "sp_stocks":
-            return transform_stocks_symbol_df(df)
+            return transform_stocks_symbol_df(df, **kwargs)
         elif asset_category == "fx":
             return transform_fx_symbol_df(df)
         else:
@@ -25,7 +26,9 @@ def transform(
         raise ValueError(f"Unknown dataset: {dataset}")
 
 
-def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
+def transform_stocks_symbol_df(
+    df: pd.DataFrame, date_stamp: str | dt.date
+) -> pd.DataFrame:
     df = raw_stock_symbols_schema.validate(df, lazy=True).reset_index(drop=True)
     df.columns = df.columns.str.lower()
     df.rename(
@@ -45,7 +48,7 @@ def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
     df[["in_sp400", "in_sp500", "in_sp600"]] = df[
         ["in_sp400", "in_sp500", "in_sp600"]
     ].astype(bool)
-    df["date_stamp"] = date_stamp()
+    df["date_stamp"] = pd.Timestamp(date_stamp).date()
 
     cols = [
         "symbol",
@@ -58,10 +61,6 @@ def transform_stocks_symbol_df(df: pd.DataFrame) -> pd.DataFrame:
         "date_stamp",
     ]
     return df[cols]
-
-
-def date_stamp():
-    return dt.datetime.now().date()
 
 
 def transform_fx_symbol_df(df: pd.DataFrame) -> pd.DataFrame:

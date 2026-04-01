@@ -35,8 +35,8 @@ def extract_task(dataset: str, asset_category: str, source: str, **kwargs):
 
 
 @task(log_prints=True)
-def transform_task(df: pd.DataFrame, dataset: str, asset_category: str):
-    return transform(df, dataset, asset_category)
+def transform_task(df: pd.DataFrame, dataset: str, asset_category: str, **kwargs):
+    return transform(df, dataset, asset_category, **kwargs)
 
 
 @task(log_prints=True)
@@ -44,10 +44,12 @@ def load_task(df: pd.DataFrame, dataset: str, asset_category: str, destination: 
     return load(df, dataset, asset_category, destination)
 
 
-def etl_symbols_source_to_s3(asset_category: str):
+def etl_symbols_source_to_s3(asset_category: str, **t_kwargs):
     print(f"Running ETL for {asset_category} symbols from source")
     df = extract_task(dataset="symbols", asset_category=asset_category, source="source")
-    df = transform_task(df=df, dataset="symbols", asset_category=asset_category)
+    df = transform_task(
+        df=df, dataset="symbols", asset_category=asset_category, **t_kwargs
+    )
     load_task(df=df, dataset="symbols", asset_category=asset_category, destination="s3")
 
 
@@ -158,8 +160,16 @@ def etl_flow(
     end_date: str | dt.date | None = None,
     chunk_size: int = 500,
 ):
+
+    start_date, end_date = get_start_end_dates(start_date, end_date)
+
     if symbols is None:
-        etl_symbols_source_to_s3(asset_category)
+        # The source is assumed to provide the current, up-to-date list of symbols.
+        # We stamp this data to align with the price history being extracted.
+        # Note: During a historical backfill, this will result in today's
+        # symbols being stamped with an older date.
+        date_stamp = end_date - dt.timedelta(days=1)
+        etl_symbols_source_to_s3(asset_category, date_stamp=date_stamp)
 
     # S3 Price History ETL
     symbols = (
@@ -172,7 +182,6 @@ def etl_flow(
         if symbols is None
         else symbols
     )
-    start_date, end_date = get_start_end_dates(start_date, end_date)
 
     try:
         etl_price_history_source_to_s3(

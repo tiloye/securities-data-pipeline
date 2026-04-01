@@ -81,11 +81,8 @@ def test_s3_etl_sp_symbols(monkeypatch, remove_s3_objects):
     monkeypatch.setattr(
         "py_pipeline.extract.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
-    monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
-    )
 
-    etl_symbols_source_to_s3("sp_stocks")
+    etl_symbols_source_to_s3("sp_stocks", date_stamp=pd.Timestamp("2000-01-03").date())
     loaded_data = (
         DeltaTable(f"{DATA_PATH}/symbols/sp_stocks", storage_options=s3_storage_options)
         .to_pandas()
@@ -129,10 +126,7 @@ def test_dw_el_sp_stocks_symbols(monkeypatch, remove_s3_objects, drop_dw_tables)
     monkeypatch.setattr(
         "py_pipeline.extract.get_sp_stock_symbols_from_source", lambda: symbols_df
     )
-    monkeypatch.setattr(
-        "py_pipeline.transform.date_stamp", lambda: pd.Timestamp("2000-01-03").date()
-    )
-    etl_symbols_source_to_s3("sp_stocks")
+    etl_symbols_source_to_s3("sp_stocks", date_stamp=pd.Timestamp("2000-01-03").date())
 
     el_symbols_s3_to_dw("sp_stocks")
 
