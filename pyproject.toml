@@ -13,7 +13,6 @@ dependencies = [
     "dbt-core>=1.10.17",
     "prefect-dbt>=0.7.13",
     "prefect-aws>=0.7.4",
-    "prefect-sqlalchemy>=0.5.3",
     "pyarrow>=23.0.0",
     "pandera[pandas]>=0.29.0",
     "deltalake>=1.5.0",
@@ -27,7 +26,6 @@ run-pipeline = "py_pipeline.main:main"
 snowflake = [
     "dbt-snowflake>=1.11.2",
     "dlt[snowflake]>=1.23.0",
-    "snowflake-sqlalchemy>=1.9.0",
 ]
 postgres = [
     "dbt-postgres>=1.10.0",
@@ -42,6 +40,8 @@ dev-dependencies = [
     "prefect>=3.1.15",
     "prefect-docker>=0.7.0",
     "dlt[workspace]>=1.23.0",
+    "sqlalchemy>=2.0.46",
+    "psycopg2-binary>=2.9.11",
 ]
 package = true
 

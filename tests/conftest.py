@@ -1,16 +1,23 @@
 import pytest
 from minio import Minio
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     BUCKET_NAME,
-    DB_ENGINE,
     S3_ENDPOINT,
+    DB_HOST,
+    DB_PORT,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME,
 )
 
-engine = DB_ENGINE
+engine = create_engine(
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
+
 client = Minio(
     S3_ENDPOINT.replace("http://", ""),
     access_key=AWS_ACCESS_KEY,

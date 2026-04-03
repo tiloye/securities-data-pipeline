@@ -6,8 +6,12 @@ from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     S3_ENDPOINT,
-    DB_ENGINE,
     DB_TYPE,
+    DB_HOST,
+    DB_PORT,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME,
 )
 from py_pipeline.validate import (
     transformed_stock_symbols_schema,
@@ -122,11 +126,11 @@ def load_to_dw(df: pd.DataFrame, dataset: str, asset_category: str) -> None:
 def get_dw_destination():
     if DB_TYPE == "postgres":
         return dlt.destinations.postgres(
-            DB_ENGINE.url.render_as_string(hide_password=False)
+            f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         )
     elif DB_TYPE == "snowflake":
         return dlt.destinations.snowflake(
-            credentials=DB_ENGINE.url.render_as_string(hide_password=False),
+            credentials=f"snowflake://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}",
             keep_staged_files=False,
         )
     else:

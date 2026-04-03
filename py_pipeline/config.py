@@ -2,14 +2,14 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 from prefect_aws import AwsCredentials
-from prefect_sqlalchemy import SqlAlchemyConnector
+from prefect.blocks.system import Secret
 
 ENV_NAME = os.getenv("ENV_NAME", "dev")
 ENV_PATH = Path(__file__).parent.parent.joinpath(f".env.{ENV_NAME}")
 load_dotenv(ENV_PATH)
 
 PREFECT_AWS_KEY_BLOCK = "sec-datalake-credentials"
-PREFECT_DW_CONNECTOR_BLOCK = "sec-dw-connector"
+PREFECT_DW_CREDENTIALS_BLOCK = "sec-dw-credentials"
 
 if ENV_NAME == "dev":
     # Create s3 and database credentials block in prefect development server
@@ -20,8 +20,15 @@ if ENV_NAME == "dev":
     )
     aws_credentials.save(PREFECT_AWS_KEY_BLOCK, overwrite=True)
 
-    dw_connector = SqlAlchemyConnector(connection_info=os.environ["DB_URL"])
-    dw_connector.save(PREFECT_DW_CONNECTOR_BLOCK, overwrite=True)
+    dw_secret = Secret(
+        value={
+            "username": os.getenv("DB_USER"),
+            "password": os.getenv("DB_PASSWORD"),
+            "host": os.getenv("DB_HOST"),
+            "port": os.getenv("DB_PORT"),
+        }
+    )
+    dw_secret.save(PREFECT_DW_CREDENTIALS_BLOCK, overwrite=True)
 
 # Load s3 credentials
 aws_credentials = AwsCredentials.load(PREFECT_AWS_KEY_BLOCK)
@@ -32,11 +39,10 @@ BUCKET_NAME = os.environ["BUCKET_NAME"]
 DATA_PATH = f"s3://{BUCKET_NAME}"
 
 # Load database connection
-dw_connection = SqlAlchemyConnector.load(PREFECT_DW_CONNECTOR_BLOCK)
-DB_ENGINE = dw_connection.get_engine()
+dw_credentials = Secret.load(PREFECT_DW_CREDENTIALS_BLOCK).get()
 DB_TYPE = os.environ["DB_TYPE"]
-DB_HOST = DB_ENGINE.url.host
-DB_PORT = DB_ENGINE.url.port
-DB_USER = DB_ENGINE.url.username
-DB_PASSWORD = DB_ENGINE.url.password
-DB_NAME = DB_ENGINE.url.database
+DB_HOST = dw_credentials.get("host")
+DB_PORT = dw_credentials.get("port")
+DB_USER = dw_credentials.get("username")
+DB_PASSWORD = dw_credentials.get("password")
+DB_NAME = os.environ["DB_NAME"]

@@ -4,13 +4,18 @@ import pandas as pd
 import pytest
 from deltalake import DeltaTable
 from prefect.testing.utilities import prefect_test_harness
+from sqlalchemy import create_engine
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
     DATA_PATH,
     S3_ENDPOINT,
-    DB_ENGINE,
+    DB_HOST,
+    DB_PORT,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME,
 )
 from py_pipeline.extract import YF_ERRORS
 from py_pipeline.orchestration import (
@@ -34,7 +39,9 @@ FX_SYMBOLS = [
 SP_SYMBOLS = ["AAPL", "INVALID_SYMBOL_1", "MSFT", "BRK-A", "BRK-B", "INVALID_SYMBOL_2"]
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
-engine = DB_ENGINE
+engine = create_engine(
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
 
 s3_storage_options = {
     "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY,

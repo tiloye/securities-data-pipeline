@@ -4,18 +4,25 @@ import pandas as pd
 import pandera.pandas as pa
 import pytest
 from deltalake import DeltaTable
+from sqlalchemy import create_engine
 
 from py_pipeline.config import (
     AWS_ACCESS_KEY,
     AWS_SECRET_KEY,
-    DB_ENGINE,
     DATA_PATH,
     S3_ENDPOINT,
+    DB_HOST,
+    DB_PORT,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME,
 )
 from py_pipeline.load import load_to_dw, load_to_s3
 
 TEST_DATA_DIR = Path(__file__).parent.joinpath("data")
-engine = DB_ENGINE
+engine = create_engine(
+    f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+)
 
 storage_options = {
     "AWS_ACCESS_KEY_ID": AWS_ACCESS_KEY,
