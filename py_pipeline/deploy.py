@@ -52,6 +52,8 @@ def get_dynamic_deployment(
         )
         deployment.storage = LocalStorage(path="/app")
     elif work_pool_type == "managed":
+        from py_pipeline.config import S3_ENDPOINT, BUCKET_NAME, DB_TYPE, DB_NAME
+
         deployment = flow.from_source(
             source=GitRepository(
                 url="https://github.com/tiloye/securities-data-pipeline.git",
@@ -62,7 +64,16 @@ def get_dynamic_deployment(
             name=deployment_name,
             cron=cron,
             parameters=parameters,
-            job_variables={"pip_packages": get_pip_requirements()},
+            job_variables={
+                "pip_packages": get_pip_requirements(),
+                "env": {
+                    "ENV_NAME": "cloud",
+                    "S3_ENDPOINT": S3_ENDPOINT,
+                    "BUCKET_NAME": BUCKET_NAME,
+                    "DB_TYPE": DB_TYPE,
+                    "DB_NAME": DB_NAME,
+                },
+            },
         )
 
     if "dbt" in flow.name:
