@@ -32,7 +32,6 @@ def get_pip_requirements(file_name: str = "requirements.txt") -> list[str]:
                 or item.startswith("--")
             ):
                 continue
-            item = item.split()[0]
             requirements.append(item)
     return requirements
 
