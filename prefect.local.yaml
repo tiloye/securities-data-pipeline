@@ -30,7 +30,6 @@ deployments:
 - name: dbt-dw-transformer
   entrypoint: py_pipeline/orchestration.py:dbt_runner
   work_pool: *local_pool
-  schedule: *schedule
   triggers:
     - type: compound
       require: all
