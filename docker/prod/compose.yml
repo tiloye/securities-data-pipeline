@@ -25,7 +25,7 @@ services:
     restart: always
 
   prefect_server:
-    image: prefecthq/prefect:3.6.16-python3.12
+    image: &prefect_image prefecthq/prefect:3.6.25-python3.12
     depends_on:
       - postgresdb
     environment:
@@ -36,7 +36,7 @@ services:
     command: prefect server start --port 4201
 
   prefect_docker_worker:
-    image: prefecthq/prefect:3.6.16-python3.12
+    image: *prefect_image
     depends_on:
       - prefect_server
     environment:

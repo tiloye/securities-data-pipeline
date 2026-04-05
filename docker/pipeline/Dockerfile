@@ -18,7 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Installing separately from its dependencies allows optimal layer caching
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev --extra postgres
 
 
 # Set project environment variables
@@ -26,8 +26,12 @@ ARG ENV_NAME
 ARG S3_ENDPOINT
 ARG BUCKET_NAME
 ARG PREFECT_API_URL
+ARG DB_TYPE
+ARG DB_NAME
 
 ENV ENV_NAME=${ENV_NAME}
 ENV S3_ENDPOINT=$S3_ENDPOINT
 ENV BUCKET_NAME=$BUCKET_NAME
 ENV PREFECT_API_URL=$PREFECT_API_URL
+ENV DB_TYPE=$DB_TYPE
+ENV DB_NAME=$DB_NAME
