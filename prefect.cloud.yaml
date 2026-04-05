@@ -1,8 +1,14 @@
+build:
+- prefect.deployments.steps.run_shell_script:
+    id: get_branch
+    script: git branch --show-current
+    stream_output: false
+
 pull:
 - prefect.deployments.steps.git_clone:
     id: clone_step
     repository: https://github.com/tiloye/securities-data-pipeline.git
-    branch: dev
+    branch: "{{ get_branch.stdout }}"
 - prefect.deployments.steps.pip_install_requirements:
     directory: "{{ clone_step.directory }}"
     requirements_file: requirements.txt
