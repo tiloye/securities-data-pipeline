@@ -1,0 +1,49 @@
+pull:
+- prefect.deployments.steps.set_working_directory:
+    directory: /app
+
+definitions:
+  work_pools:
+    local_pool: &local_pool
+      name: "docker-pool"
+      job_variables:
+        image: securities-data-pipeline:latest
+
+  schedule: &schedule
+    cron: 0 0 * * 2-6
+
+deployments:
+- name: fx-data-pipeline
+  entrypoint: py_pipeline/orchestration.py:etl_flow
+  parameters:
+    asset_category: fx
+  work_pool: *local_pool
+  schedule: *schedule
+
+- name: sp-stocks-data-pipeline
+  entrypoint: py_pipeline/orchestration.py:etl_flow
+  parameters:
+    asset_category: sp_stocks
+  work_pool: *local_pool
+  schedule: *schedule
+
+- name: dbt-dw-transformer
+  entrypoint: py_pipeline/orchestration.py:dbt_runner
+  work_pool: *local_pool
+  schedule: *schedule
+  triggers:
+    - type: compound
+      require: all
+      within: 600
+      name: sec-dw-transformation-runner
+      triggers:
+        - type: event
+          expect:
+            - prefect.flow-run.Completed
+          match_related:
+            prefect.resource.name: fx-data-pipeline
+        - type: event
+          expect:
+            - prefect.flow-run.Completed
+          match_related:
+            prefect.resource.name: sp-stocks-data-pipeline

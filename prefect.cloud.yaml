@@ -1,0 +1,60 @@
+pull:
+- prefect.deployments.steps.git_clone:
+    id: clone_step
+    repository: https://github.com/tiloye/securities-data-pipeline.git
+    branch: dev
+- prefect.deployments.steps.pip_install_requirements:
+    directory: "{{ clone_step.directory }}"
+    requirements_file: requirements.txt
+
+definitions:
+  work_pools:
+    managed_pool: &managed_pool
+      name: docker-pool
+      work_queue_name: default
+      job_variables:
+        env:
+          ENV_NAME: cloud
+          S3_ENDPOINT: "{{ $S3_ENDPOINT }}"
+          BUCKET_NAME: "{{ $BUCKET_NAME }}"
+          DB_TYPE: "{{ $DB_TYPE }}"
+          DB_NAME: "{{ $DB_NAME }}"
+
+  schedule: &schedule
+    cron: 0 0 * * 2-6
+
+deployments:
+- name: fx-data-pipeline
+  entrypoint: py_pipeline/orchestration.py:etl_flow
+  parameters:
+    asset_category: fx
+  work_pool: *managed_pool
+  schedule: *schedule
+
+- name: sp-stocks-data-pipeline
+  entrypoint: py_pipeline/orchestration.py:etl_flow
+  parameters:
+    asset_category: sp_stocks
+  work_pool: *managed_pool
+  schedule: *schedule
+
+- name: dbt-dw-transformer
+  entrypoint: py_pipeline/orchestration.py:dbt_runner
+  work_pool: *managed_pool
+  schedule: *schedule
+  triggers:
+    - type: compound
+      require: all
+      within: 600
+      name: sec-dw-transformation-runner
+      triggers:
+        - type: event
+          expect:
+            - prefect.flow-run.Completed
+          match_related:
+            prefect.resource.name: fx-data-pipeline
+        - type: event
+          expect:
+            - prefect.flow-run.Completed
+          match_related:
+            prefect.resource.name: sp-stocks-data-pipeline
