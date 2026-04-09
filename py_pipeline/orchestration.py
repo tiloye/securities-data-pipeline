@@ -276,7 +276,7 @@ def dbt_runner() -> None:
 
 if __name__ == "__main__":
     end_date = dt.date.today()
-    start_date = end_date - dt.timedelta(days=5)
+    start_date = end_date - dt.timedelta(days=30)
 
     etl_flow(asset_category="fx", start_date=start_date, end_date=end_date)
     etl_flow(asset_category="sp_stocks", start_date=start_date, end_date=end_date)
