@@ -3,8 +3,19 @@ name: CI-CD Workflow
 on:
   push:
     branches: [ main, dev ]
+    paths:
+      - '**.py'
+      - '**.sql'
+      - '.github/workflows/ci_cd.yml'
+      - 'prefect.cloud.yaml'
+      
   pull_request:
     branches: [ main ]
+    paths:
+      - '**.py'
+      - '**.sql'
+      - '.github/workflows/ci_cd.yml'
+      - 'prefect.cloud.yaml'
 
 
 jobs:
@@ -48,6 +59,11 @@ jobs:
         run: |
           prefect server start --background
           python -m py_pipeline.orchestration
+
+      - name: Test deployment
+        run: |
+          prefect work-pool create --type docker docker-pool
+          prefect deploy --no-prompt --all --prefect-file prefect.cloud.yaml
 
   deploy:
     needs: test
