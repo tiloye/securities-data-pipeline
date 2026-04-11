@@ -46,6 +46,9 @@ Ensure you have Docker installed on your system. The following steps were tested
     S3_ENDPOINT=http://127.0.0.1:9002
     BUCKET_NAME=securities-data-lake
 
+    DB_TYPE=postgres
+    DB_NAME=securities_db
+
     PREFECT_API_URL=http://127.0.0.1:4201/api
     ```
 4. Configure Prefect Blocks:
@@ -56,10 +59,9 @@ Ensure you have Docker installed on your system. The following steps were tested
         - **AWS Access Key ID:** `minioadmin` (or your specific S3 access key)
         - **AWS Access Key Secret:** `minioadmin` (or your specific S3 secret key)
 
-    - **SQLAlchemyConnector** block:
-        - **Block Name:** `sec-dw-connector`
-        - **Connection Info:** Select **URI** and enter your SQLAlchemy connection string:
-            - **URL:** `postgresql://postgres:postgres@localhost:5433/securities_db`
+    - **Secret** block:
+        - **Block Name:** `sec-dw-credentials`
+        - **Value (JSON):** `{"username": "postgres", "password": "postgres", "host": "localhost", "port": 5433}`
     
     Ensure these credentials match your production (local) datalake and warehouse credentials.
 
@@ -69,7 +71,7 @@ Ensure you have Docker installed on your system. The following steps were tested
     ```
 6. Deploy the pipeline as a Prefect flow:
    ```
-   docker run --rm -it --network=host securities-data-pipeline:latest python -m py_pipeline.deploy
+   docker run --network host --rm securities-data-pipeline:latest prefect deploy --no-prompt --prefect-file prefect.local.yaml --all
    ```
 
 Your Prefect UI should have three deployments as shown in the image below:
